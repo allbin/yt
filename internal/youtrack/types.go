@@ -104,3 +104,23 @@ func (i *Issue) Desc() string {
 	}
 	return *i.Description
 }
+
+type Agile struct {
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	Projects      []Project `json:"projects"`
+	CurrentSprint *Sprint   `json:"currentSprint"`
+	Sprints       []Sprint  `json:"sprints,omitempty"`
+}
+
+type Project struct {
+	ShortName string `json:"shortName"`
+}
+
+type Sprint struct {
+	ID     string  `json:"id"`
+	Name   string  `json:"name"`
+	Start  *int64  `json:"start,omitempty"`
+	Finish *int64  `json:"finish,omitempty"`
+	Issues []Issue `json:"issues,omitempty"`
+}

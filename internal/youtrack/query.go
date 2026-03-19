@@ -13,7 +13,7 @@ func BuildQuery(project, state, assignee, query string) string {
 		parts = append(parts, "State: {"+state+"}")
 	}
 	if assignee != "" {
-		parts = append(parts, "Assignee: "+assignee)
+		parts = append(parts, "Assignee: {"+assignee+"}")
 	}
 	if query != "" {
 		parts = append(parts, query)

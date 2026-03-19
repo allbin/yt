@@ -57,3 +57,13 @@ func newClient() (*youtrack.Client, error) {
 	}
 	return youtrack.NewClient(u, token), nil
 }
+
+// resolveAssignee converts a user-provided assignee value (full name, partial,
+// or login) to a YouTrack login for use in queries. Special values like "me"
+// pass through unchanged.
+func resolveAssignee(client *youtrack.Client, assignee string) (string, error) {
+	if assignee == "" {
+		return "", nil
+	}
+	return client.ResolveUser(assignee)
+}

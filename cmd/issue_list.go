@@ -53,7 +53,12 @@ func runIssueList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	query := youtrack.BuildQuery(listProject, listState, listAssignee, listQuery)
+	assignee, err := resolveAssignee(client, listAssignee)
+	if err != nil {
+		return err
+	}
+
+	query := youtrack.BuildQuery(listProject, listState, assignee, listQuery)
 
 	issues, err := client.ListIssues(query, listLimit)
 	if err != nil {

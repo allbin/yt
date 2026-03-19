@@ -15,9 +15,10 @@ func TestBuildQuery(t *testing.T) {
 		{"project", "PROJ", "", "", "", "project: PROJ"},
 		{"state", "", "Open", "", "", "State: {Open}"},
 		{"multi_word_state", "", "In Progress", "", "", "State: {In Progress}"},
-		{"assignee", "", "", "me", "", "Assignee: me"},
+		{"assignee", "", "", "me", "", "Assignee: {me}"},
+		{"assignee_full_name", "", "", "Samuel Olsson", "", "Assignee: {Samuel Olsson}"},
 		{"raw_query", "", "", "", "tag: Important", "tag: Important"},
-		{"all", "PROJ", "Open", "john", "sort by: updated", "project: PROJ State: {Open} Assignee: john sort by: updated"},
+		{"all", "PROJ", "Open", "john", "sort by: updated", "project: PROJ State: {Open} Assignee: {john} sort by: updated"},
 		{"project_and_query", "PROJ", "", "", "created: today", "project: PROJ created: today"},
 	}
 	for _, tt := range tests {
