@@ -81,7 +81,7 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	boardPart := fmt.Sprintf("Board {%s}: {%s}", board.Name, sprintName)
+	boardPart := fmt.Sprintf("Board %s: {%s}", board.Name, sprintName)
 	if boardQuery != "" {
 		boardPart += " " + boardQuery
 	}

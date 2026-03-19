@@ -21,7 +21,7 @@ func TestStateColorSubstringCollision(t *testing.T) {
 		{"In Progress", ColorCyan},
 		{"Open", ColorYellow},
 		{"Submitted", ColorYellow},
-		{"Planned", ColorDim},
+		{"Planned", ColorSlate},
 	}
 	for _, tt := range tests {
 		t.Run(tt.state, func(t *testing.T) {

@@ -13,8 +13,9 @@ var (
 	ColorGreen  = lipgloss.Color("76")
 	ColorRed    = lipgloss.Color("196")
 	ColorYellow = lipgloss.Color("214")
-	ColorCyan   = lipgloss.Color("80")
-	ColorBorder = lipgloss.Color("238")
+	ColorCyan    = lipgloss.Color("80")
+	ColorSlate   = lipgloss.Color("103")
+	ColorBorder  = lipgloss.Color("238")
 )
 
 var (
@@ -39,7 +40,7 @@ func StateColor(state string) lipgloss.TerminalColor {
 	case containsAny(lower, "in dev", "in progress", "progress"):
 		return ColorCyan
 	case containsAny(lower, "planned", "scheduled"):
-		return ColorDim
+		return ColorSlate
 	case containsAny(lower, "open", "submitted", "new", "reopened"):
 		return ColorYellow
 	default:

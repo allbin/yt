@@ -119,12 +119,36 @@ type Comment struct {
 	Updated *int64 `json:"updated"`
 }
 
+type AgileColumnValue struct {
+	Name       string `json:"name"`
+	IsResolved bool   `json:"isResolved"`
+}
+
+type AgileColumn struct {
+	Presentation string             `json:"presentation"`
+	Ordinal      int                `json:"ordinal"`
+	FieldValues  []AgileColumnValue `json:"fieldValues"`
+}
+
+type AgileColumnSettings struct {
+	Field   *struct{ Name string `json:"name"` } `json:"field"`
+	Columns []AgileColumn                         `json:"columns"`
+}
+
+type AgileSwimlaneSetting struct {
+	Enabled bool                                   `json:"enabled"`
+	Field   *struct{ Name string `json:"name"` }  `json:"field"`
+	Values  []struct{ Name string `json:"name"` } `json:"values"`
+}
+
 type Agile struct {
-	ID            string    `json:"id"`
-	Name          string    `json:"name"`
-	Projects      []Project `json:"projects"`
-	CurrentSprint *Sprint   `json:"currentSprint"`
-	Sprints       []Sprint  `json:"sprints,omitempty"`
+	ID               string                `json:"id"`
+	Name             string                `json:"name"`
+	Projects         []Project             `json:"projects"`
+	CurrentSprint    *Sprint               `json:"currentSprint"`
+	Sprints          []Sprint              `json:"sprints,omitempty"`
+	ColumnSettings   *AgileColumnSettings  `json:"columnSettings,omitempty"`
+	SwimlaneSettings *AgileSwimlaneSetting `json:"swimlaneSettings,omitempty"`
 }
 
 type Project struct {

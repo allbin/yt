@@ -58,4 +58,5 @@ yt board [name] [flags]
 
 * [yt](yt.md)	 - YouTrack CLI
 * [yt board list](yt_board_list.md)	 - List agile boards
+* [yt board view](yt_board_view.md)	 - Open interactive board viewer
 

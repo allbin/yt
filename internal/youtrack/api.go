@@ -6,6 +6,7 @@ type API interface {
 	ListIssues(query string, limit int) ([]Issue, error)
 	ListBoards() ([]Agile, error)
 	GetBoardByName(name string) (*Agile, error)
+	GetBoardForView(name string) (*Agile, error)
 	ListProjects() ([]Project, error)
 	ResolveUser(query string) (string, error)
 	UpdateIssue(id string, command string) error
