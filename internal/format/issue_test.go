@@ -34,14 +34,20 @@ func TestIssueFormat(t *testing.T) {
 	out := buf.String()
 
 	checks := []string{
-		"# PROJ-1: Test issue",
-		"**State:** Open",
-		"**Assignee:** John Doe",
-		"**Priority:** Major",
-		"**Type:** Bug",
-		"**Subsystem:** API",
-		"**Tags:** urgent",
-		"## Description",
+		"PROJ-1",
+		"Test issue",
+		"State",
+		"Open",
+		"Assignee",
+		"John Doe",
+		"Priority",
+		"Major",
+		"Type",
+		"Bug",
+		"Subsystem",
+		"API",
+		"Tags",
+		"urgent",
 		"Fix the bug",
 	}
 	for _, want := range checks {
@@ -61,8 +67,8 @@ func TestIssueFormatNoDescription(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if strings.Contains(buf.String(), "## Description") {
-		t.Error("should not contain Description section when description is nil")
+	if strings.Contains(buf.String(), "────") {
+		t.Error("should not contain separator when description is nil")
 	}
 }
 

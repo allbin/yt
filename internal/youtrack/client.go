@@ -53,7 +53,7 @@ func (c *Client) get(path string, params url.Values) (data []byte, err error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("API %d: %s", resp.StatusCode, body)
+		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(body)}
 	}
 
 	return body, nil
@@ -85,7 +85,7 @@ func (c *Client) post(path string, body any) error {
 
 	if resp.StatusCode >= 300 {
 		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("API %d: %s", resp.StatusCode, respBody)
+		return &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 
 	return nil
@@ -121,7 +121,7 @@ func (c *Client) postJSON(path string, body any) (data []byte, err error) {
 	}
 
 	if resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("API %d: %s", resp.StatusCode, respBody)
+		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 
 	return respBody, nil

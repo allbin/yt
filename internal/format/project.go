@@ -3,25 +3,35 @@ package format
 import (
 	"fmt"
 	"io"
-	"text/tabwriter"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 
 	"github.com/allbin/yt/internal/youtrack"
 )
 
 func ProjectList(w io.Writer, projects []youtrack.Project) error {
 	if len(projects) == 0 {
-		_, err := fmt.Fprintln(w, "No projects found.")
+		_, err := fmt.Fprintln(w, styleDim.Render("No projects found."))
 		return err
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	ew := &errWriter{w: tw}
-	ew.println("SHORT\tNAME")
+	t := newTable("SHORT", "NAME").
+		StyleFunc(func(row, col int) lipgloss.Style {
+			s := lipgloss.NewStyle().Padding(0, 1)
+			if row == table.HeaderRow {
+				return s.Bold(true).Foreground(ColorAccent)
+			}
+			if col == 0 {
+				return s.Bold(true)
+			}
+			return s
+		})
+
 	for _, p := range projects {
-		ew.printf("%s\t%s\n", p.ShortName, p.Name)
+		t.Row(p.ShortName, p.Name)
 	}
-	if ew.err != nil {
-		return ew.err
-	}
-	return tw.Flush()
+
+	_, err := fmt.Fprintln(w, t.Render())
+	return err
 }

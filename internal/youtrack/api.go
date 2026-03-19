@@ -12,4 +12,6 @@ type API interface {
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
 	CreateIssue(project, summary, description string) (*Issue, error)
+	GetIssueStates(issueID string) ([]StateBundleElement, error)
+	SetIssueState(issueID, stateName string) error
 }

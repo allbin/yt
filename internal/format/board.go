@@ -4,58 +4,58 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"text/tabwriter"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 
 	"github.com/allbin/yt/internal/youtrack"
 )
 
 func BoardList(w io.Writer, boards []youtrack.Agile) error {
 	if len(boards) == 0 {
-		_, err := fmt.Fprintln(w, "No boards found.")
+		_, err := fmt.Fprintln(w, styleDim.Render("No boards found."))
 		return err
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	ew := &errWriter{w: tw}
-	ew.println("NAME\tPROJECTS\tCURRENT SPRINT")
+	t := newTable("NAME", "PROJECTS", "CURRENT SPRINT").
+		StyleFunc(func(row, col int) lipgloss.Style {
+			s := lipgloss.NewStyle().Padding(0, 1)
+			if row == table.HeaderRow {
+				return s.Bold(true).Foreground(ColorAccent)
+			}
+			if col == 0 {
+				return s.Bold(true)
+			}
+			return s
+		})
+
 	for _, b := range boards {
 		sprint := ""
 		if b.CurrentSprint != nil {
 			sprint = b.CurrentSprint.Name
 		}
-		ew.printf("%s\t%s\t%s\n", b.Name, formatProjects(b.Projects), sprint)
+		t.Row(b.Name, formatProjects(b.Projects), sprint)
 	}
-	if ew.err != nil {
-		return ew.err
-	}
-	return tw.Flush()
+
+	_, err := fmt.Fprintln(w, t.Render())
+	return err
 }
 
 func SprintIssues(w io.Writer, board, sprint string, issues []youtrack.Issue) error {
 	ew := &errWriter{w: w}
-	ew.printf("# %s — %s (%d issues)\n\n", board, sprint, len(issues))
+
+	header := lipgloss.NewStyle().Bold(true).Foreground(ColorAccent).Render(board)
+	sprintName := styleBold.Render(sprint)
+	count := styleDim.Render(fmt.Sprintf("(%d issues)", len(issues)))
+	ew.printf("%s — %s  %s\n\n", header, sprintName, count)
 
 	if len(issues) == 0 {
-		ew.println("No issues.")
+		ew.println(styleDim.Render("No issues."))
 		return ew.err
 	}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	tew := &errWriter{w: tw}
-	tew.println("ID\tSTATE\tPRIORITY\tASSIGNEE\tSUMMARY")
-	for _, issue := range issues {
-		tew.printf("%s\t%s\t%s\t%s\t%s\n",
-			issue.IDReadable,
-			issue.Field("State"),
-			issue.Field("Priority"),
-			issue.Field("Assignee"),
-			issue.Summary,
-		)
-	}
-	if tew.err != nil {
-		return tew.err
-	}
-	return tw.Flush()
+	ew.println(issueTable(issues))
+	return ew.err
 }
 
 func formatProjects(projects []youtrack.Project) string {

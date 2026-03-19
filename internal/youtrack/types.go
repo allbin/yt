@@ -105,6 +105,12 @@ func (i *Issue) Desc() string {
 	return *i.Description
 }
 
+type StateBundleElement struct {
+	Name       string `json:"name"`
+	Ordinal    int    `json:"ordinal"`
+	IsResolved bool   `json:"isResolved"`
+}
+
 type Comment struct {
 	ID      string `json:"id"`
 	Text    string `json:"text"`

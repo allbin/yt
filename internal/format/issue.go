@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"strings"
-	"text/tabwriter"
+
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/lipgloss/table"
 
 	"github.com/allbin/yt/internal/youtrack"
 )
@@ -35,7 +36,9 @@ func JSON(w io.Writer, v any) error {
 
 func Issue(w io.Writer, issue *youtrack.Issue) error {
 	ew := &errWriter{w: w}
-	ew.printf("# %s: %s\n\n", issue.IDReadable, issue.Summary)
+
+	id := lipgloss.NewStyle().Bold(true).Foreground(ColorAccent).Render(issue.IDReadable)
+	ew.printf("%s  %s\n", id, styleBold.Render(issue.Summary))
 
 	state := issue.Field("State")
 	assignee := issue.Field("Assignee")
@@ -44,37 +47,33 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 	subsystem := issue.Field("Subsystem")
 	tags := issue.TagNames()
 
-	var meta []string
+	hasMeta := state != "" || assignee != "" || priority != "" || typ != "" || subsystem != "" || tags != ""
+	if hasMeta {
+		ew.println()
+	}
 	if state != "" {
-		meta = append(meta, "**State:** "+state)
+		ew.printf("  %s %s\n", styleLabel.Render("State"), lipgloss.NewStyle().Foreground(StateColor(state)).Render(state))
 	}
 	if assignee != "" {
-		meta = append(meta, "**Assignee:** "+assignee)
+		ew.printf("  %s %s\n", styleLabel.Render("Assignee"), assignee)
 	}
 	if priority != "" {
-		meta = append(meta, "**Priority:** "+priority)
+		ew.printf("  %s %s\n", styleLabel.Render("Priority"), lipgloss.NewStyle().Foreground(PriorityColor(priority)).Render(priority))
 	}
 	if typ != "" {
-		meta = append(meta, "**Type:** "+typ)
+		ew.printf("  %s %s\n", styleLabel.Render("Type"), typ)
 	}
-	if len(meta) > 0 {
-		ew.println(strings.Join(meta, "  "))
-		ew.println()
-	}
-
 	if subsystem != "" {
-		ew.printf("**Subsystem:** %s\n", subsystem)
+		ew.printf("  %s %s\n", styleLabel.Render("Subsystem"), subsystem)
 	}
 	if tags != "" {
-		ew.printf("**Tags:** %s\n", tags)
-	}
-	if subsystem != "" || tags != "" {
-		ew.println()
+		ew.printf("  %s %s\n", styleLabel.Render("Tags"), styleDim.Render(tags))
 	}
 
 	desc := issue.Desc()
 	if desc != "" {
-		ew.println("## Description")
+		ew.println()
+		ew.println(styleRule.Render("────────────────────────────────────"))
 		ew.println()
 		ew.println(desc)
 	}
@@ -84,15 +83,33 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 
 func IssueList(w io.Writer, issues []youtrack.Issue) error {
 	if len(issues) == 0 {
-		_, err := fmt.Fprintln(w, "No issues found.")
+		_, err := fmt.Fprintln(w, styleDim.Render("No issues found."))
 		return err
 	}
+	_, err := fmt.Fprintln(w, issueTable(issues))
+	return err
+}
 
-	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
-	ew := &errWriter{w: tw}
-	ew.println("ID\tSTATE\tPRIORITY\tASSIGNEE\tSUMMARY")
+func issueTable(issues []youtrack.Issue) string {
+	t := newTable("ID", "STATE", "PRIORITY", "ASSIGNEE", "SUMMARY").
+		StyleFunc(func(row, col int) lipgloss.Style {
+			s := lipgloss.NewStyle().Padding(0, 1)
+			if row == table.HeaderRow {
+				return s.Bold(true).Foreground(ColorAccent)
+			}
+			switch col {
+			case 0:
+				return s.Bold(true)
+			case 1:
+				return s.Foreground(StateColor(issues[row].Field("State")))
+			case 2:
+				return s.Foreground(PriorityColor(issues[row].Field("Priority")))
+			}
+			return s
+		})
+
 	for _, issue := range issues {
-		ew.printf("%s\t%s\t%s\t%s\t%s\n",
+		t.Row(
 			issue.IDReadable,
 			issue.Field("State"),
 			issue.Field("Priority"),
@@ -100,8 +117,6 @@ func IssueList(w io.Writer, issues []youtrack.Issue) error {
 			issue.Summary,
 		)
 	}
-	if ew.err != nil {
-		return ew.err
-	}
-	return tw.Flush()
+
+	return t.Render()
 }

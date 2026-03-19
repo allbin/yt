@@ -72,8 +72,11 @@ func TestSprintIssues(t *testing.T) {
 	}
 	out := buf.String()
 
-	if !strings.Contains(out, "TestBoard — 2026-01") {
-		t.Error("missing header")
+	if !strings.Contains(out, "TestBoard") {
+		t.Error("missing board name")
+	}
+	if !strings.Contains(out, "2026-01") {
+		t.Error("missing sprint name")
 	}
 	if !strings.Contains(out, "T-1") {
 		t.Error("missing issue ID")

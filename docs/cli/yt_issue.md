@@ -47,5 +47,6 @@ yt issue [id] [flags]
 * [yt issue comments](yt_issue_comments.md)	 - List comments on an issue
 * [yt issue create](yt_issue_create.md)	 - Create a new YouTrack issue
 * [yt issue list](yt_issue_list.md)	 - List YouTrack issues
+* [yt issue state](yt_issue_state.md)	 - Interactively set issue state
 * [yt issue update](yt_issue_update.md)	 - Update a YouTrack issue
 

@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
@@ -27,9 +31,25 @@ func Root() *cobra.Command { return rootCmd }
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "yt:", err)
+		fmt.Fprintln(os.Stderr, formatError(err))
 		os.Exit(1)
 	}
+}
+
+var errLabel = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("196")).Render("error")
+
+func formatError(err error) string {
+	var apiErr *youtrack.APIError
+	if errors.As(err, &apiErr) {
+		full := err.Error()
+		context := strings.TrimSuffix(full, ": "+apiErr.Error())
+		msg := apiErr.Message()
+		if context != full && context != "" {
+			return fmt.Sprintf("%s %s — %s", errLabel, context, msg)
+		}
+		return fmt.Sprintf("%s %s", errLabel, msg)
+	}
+	return fmt.Sprintf("%s %s", errLabel, err)
 }
 
 func init() {
