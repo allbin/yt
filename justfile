@@ -17,3 +17,5 @@ docs:
 
 install:
     go install .
+    yt install skill
+    yt install completion
