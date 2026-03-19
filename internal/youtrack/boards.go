@@ -14,6 +14,9 @@ const (
 		"currentSprint(id,name),sprints(id,name)," +
 		"columnSettings(field(name),columns(presentation,ordinal,fieldValues(name,isResolved)))," +
 		"swimlaneSettings(enabled,field(name),values(name))"
+	sprintBoardFields = "columns(agileColumn(presentation),cells(row(id,name,$type," +
+		"issue(idReadable,summary)),issues(idReadable,summary,description,resolved,created,updated," +
+		"tags(name),customFields(name,value(name,text,presentation,login,fullName)))))"
 )
 
 func (c *Client) ListBoards() ([]Agile, error) {
@@ -77,5 +80,23 @@ func (c *Client) GetBoardForView(name string) (*Agile, error) {
 	}
 
 	return nil, fmt.Errorf("board %q not found", name)
+}
+
+func (c *Client) GetSprintBoard(boardID, sprintID string) (*SprintBoard, error) {
+	path := fmt.Sprintf("/api/agiles/%s/sprints/%s/board",
+		url.PathEscape(boardID), url.PathEscape(sprintID))
+	params := url.Values{"fields": {sprintBoardFields}}
+
+	data, err := c.get(path, params)
+	if err != nil {
+		return nil, fmt.Errorf("get sprint board: %w", err)
+	}
+
+	var board SprintBoard
+	if err := json.Unmarshal(data, &board); err != nil {
+		return nil, fmt.Errorf("parse sprint board: %w", err)
+	}
+
+	return &board, nil
 }
 

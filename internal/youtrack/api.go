@@ -15,4 +15,5 @@ type API interface {
 	CreateIssue(project, summary, description string) (*Issue, error)
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
+	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
 }

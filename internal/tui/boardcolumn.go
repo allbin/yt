@@ -87,13 +87,21 @@ func (m *BoardViewer) renderColumn(colIdx, width int) string {
 	numSL := m.numSwimlanes()
 	for sl := range numSL {
 		if len(m.swimlanes) > 0 {
-			content.WriteString("\n")
-			name := m.swimlanes[sl]
-			divider := fmt.Sprintf("\u2500\u2500 %s ", name)
-			if pad := innerWidth - lipgloss.Width(divider); pad > 0 {
-				divider += strings.Repeat("\u2500", pad)
+			slDef := m.swimlanes[sl]
+			issues := m.issues[colIdx][sl]
+			count := len(issues)
+			cursorHere := isFocused && sl == m.cursor.swimlane
+
+			if count == 0 && !cursorHere {
+				continue
 			}
-			content.WriteString(format.StyleDim.Render(divider))
+
+			content.WriteString("\n")
+			content.WriteString(m.renderSwimlaneDivider(slDef, count, innerWidth, isFocused, cursorHere))
+
+			if slDef.collapsed {
+				continue
+			}
 		}
 
 		issues := m.issues[colIdx][sl]
@@ -141,6 +149,36 @@ func (m *BoardViewer) renderMinimizedColumn(col columnDef, focused bool) string 
 	return style.Render(strings.Join(lines, "\n"))
 }
 
+func (m *BoardViewer) renderSwimlaneDivider(sl swimlaneDef, count, width int, colFocused, slFocused bool) string {
+	indicator := "\u25be" // ▾ expanded
+	if sl.collapsed {
+		indicator = "\u25b8" // ▸ collapsed
+	}
+
+	label := sl.name
+	countStr := fmt.Sprintf(" (%d)", count)
+
+	maxLabel := width - 2 - lipgloss.Width(countStr) - 3
+	if maxLabel > 0 && lipgloss.Width(label) > maxLabel {
+		label = truncateToWidth(label, maxLabel-1) + "\u2026"
+	}
+
+	text := indicator + " " + label + countStr + " "
+	fill := max(width-lipgloss.Width(text), 0)
+	line := text + strings.Repeat("\u2500", fill)
+
+	if !colFocused {
+		return format.StyleDim.Render(line)
+	}
+	if slFocused {
+		return lipgloss.NewStyle().
+			Foreground(format.ColorAccent).
+			Bold(true).
+			Render(line)
+	}
+	return line
+}
+
 func columnColor(col columnDef) lipgloss.TerminalColor {
 	if len(col.stateNames) > 0 {
 		return format.StateColor(col.stateNames[0])
@@ -154,5 +192,98 @@ func (m *BoardViewer) columnIssueCount(colIdx int) int {
 		count += len(m.issues[colIdx][sl])
 	}
 	return count
+}
+
+// --- Swimlane row-major rendering ---
+
+func (m *BoardViewer) renderColumnHeader(colIdx, width int) string {
+	col := m.columns[colIdx]
+	isFocused := colIdx == m.cursor.col
+
+	if col.minimized {
+		ch := string([]rune(col.presentation)[0])
+		style := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
+		if isFocused {
+			style = style.Foreground(columnColor(col))
+		} else {
+			style = style.Foreground(format.ColorDim)
+		}
+		return style.Render(ch)
+	}
+
+	count := m.columnIssueCount(colIdx)
+	prefix := ""
+	if col.isResolved {
+		prefix = "\uf00c "
+	}
+	header := fmt.Sprintf("%s%s (%d)", prefix, col.presentation, count)
+	if lipgloss.Width(header) > width-2 {
+		header = truncateToWidth(header, width-3) + "\u2026"
+	}
+
+	style := lipgloss.NewStyle().Width(width).Padding(0, 1)
+	if isFocused {
+		style = style.Foreground(columnColor(col)).Bold(true).Reverse(true)
+	} else {
+		style = style.Bold(true)
+	}
+	return style.Render(header)
+}
+
+func (m *BoardViewer) renderSwimlaneBanner(slIdx, totalWidth int) string {
+	sl := m.swimlanes[slIdx]
+	isFocused := m.cursor.swimlane == slIdx
+
+	indicator := "\u25be" // ▾
+	if sl.collapsed {
+		indicator = "\u25b8" // ▸
+	}
+
+	total := 0
+	for ci := range m.columns {
+		total += len(m.issues[ci][slIdx])
+	}
+
+	label := sl.name
+	countStr := fmt.Sprintf(" (%d)", total)
+	maxLabel := totalWidth - 4 - lipgloss.Width(countStr)
+	if maxLabel > 0 && lipgloss.Width(label) > maxLabel {
+		label = truncateToWidth(label, maxLabel-1) + "\u2026"
+	}
+
+	text := indicator + " " + label + countStr + " "
+	fill := max(totalWidth-lipgloss.Width(text), 0)
+	line := text + strings.Repeat("\u2500", fill)
+
+	if isFocused {
+		return lipgloss.NewStyle().
+			Foreground(format.ColorAccent).
+			Bold(true).
+			Render(line)
+	}
+	return format.StyleDim.Render(line)
+}
+
+func (m *BoardViewer) renderColumnCell(colIdx, slIdx, width int) string {
+	col := m.columns[colIdx]
+	if col.minimized {
+		return lipgloss.NewStyle().Width(width).Render("")
+	}
+
+	colFocused := colIdx == m.cursor.col
+	slFocused := slIdx == m.cursor.swimlane
+	issues := m.issues[colIdx][slIdx]
+	innerWidth := max(width-2, 10) // account for padding
+
+	var b strings.Builder
+	for i, issue := range issues {
+		if i > 0 {
+			b.WriteString("\n")
+		}
+		focused := colFocused && slFocused && i == m.cursor.row
+		b.WriteString(renderCard(issue, innerWidth, focused, !colFocused))
+	}
+
+	return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(b.String())
 }
 

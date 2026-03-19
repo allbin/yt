@@ -164,3 +164,27 @@ type Sprint struct {
 	Finish *int64  `json:"finish,omitempty"`
 	Issues []Issue `json:"issues,omitempty"`
 }
+
+// SprintBoard represents the board grid returned by the sprint board API.
+type SprintBoard struct {
+	Columns []SprintBoardColumn `json:"columns"`
+}
+
+type SprintBoardColumn struct {
+	AgileColumn struct {
+		Presentation string `json:"presentation"`
+	} `json:"agileColumn"`
+	Cells []BoardCell `json:"cells"`
+}
+
+type BoardCell struct {
+	Row    BoardRow `json:"row"`
+	Issues []Issue  `json:"issues"`
+}
+
+type BoardRow struct {
+	ID    string `json:"id"`
+	Name  string `json:"name"`
+	Type  string `json:"$type"`
+	Issue *Issue `json:"issue"`
+}

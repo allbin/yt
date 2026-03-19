@@ -34,3 +34,6 @@ func (m *mockAPI) SetIssueState(_ string, state string) error {
 	m.stateSet = state
 	return nil
 }
+func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) {
+	return nil, nil
+}

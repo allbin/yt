@@ -9,6 +9,7 @@ import (
 
 type BoardLayout struct {
 	Minimized []string `yaml:"minimized,omitempty"`
+	Collapsed []string `yaml:"collapsed,omitempty"`
 }
 
 type AppState struct {
@@ -55,6 +56,19 @@ func (s *AppState) BoardMinimized(boardID string) []string {
 func (s *AppState) SetBoardMinimized(boardID string, names []string) {
 	bl := s.Boards[boardID]
 	bl.Minimized = names
+	s.Boards[boardID] = bl
+}
+
+func (s *AppState) BoardCollapsed(boardID string) []string {
+	if bl, ok := s.Boards[boardID]; ok {
+		return bl.Collapsed
+	}
+	return nil
+}
+
+func (s *AppState) SetBoardCollapsed(boardID string, ids []string) {
+	bl := s.Boards[boardID]
+	bl.Collapsed = ids
 	s.Boards[boardID] = bl
 }
 
