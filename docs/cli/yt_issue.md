@@ -49,4 +49,5 @@ yt issue [id] [flags]
 * [yt issue list](yt_issue_list.md)	 - List YouTrack issues
 * [yt issue state](yt_issue_state.md)	 - Interactively set issue state
 * [yt issue update](yt_issue_update.md)	 - Update a YouTrack issue
+* [yt issue view](yt_issue_view.md)	 - Open interactive issue viewer
 

@@ -66,7 +66,11 @@ func (m StatePicker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		case "enter":
-			m.result = StateResult{State: m.states[m.cursor].Name}
+			if len(m.states) > 0 {
+				m.result = StateResult{State: m.states[m.cursor].Name}
+			} else {
+				m.result = StateResult{Cancelled: true}
+			}
 			return m, tea.Quit
 		}
 	}
@@ -79,11 +83,8 @@ func (m StatePicker) View() string {
 	}
 
 	var b strings.Builder
-	dim := lipgloss.NewStyle().Foreground(format.ColorDim)
 
-	id := lipgloss.NewStyle().Bold(true).Foreground(format.ColorAccent).Render(m.issueID)
-	summary := lipgloss.NewStyle().Bold(true).Render(m.summary)
-	fmt.Fprintf(&b, "%s  %s\n\n", id, summary)
+	fmt.Fprintf(&b, "%s  %s\n\n", format.StyleID.Render(m.issueID), format.StyleBold.Render(m.summary))
 
 	for i, s := range m.states {
 		pointer := "  "
@@ -100,13 +101,13 @@ func (m StatePicker) View() string {
 		fmt.Fprintf(&b, "%s%s %s", pointer, marker, name)
 
 		if i == m.current {
-			fmt.Fprintf(&b, "  %s", dim.Render("current"))
+			fmt.Fprintf(&b, "  %s", format.StyleDim.Render("current"))
 		}
 		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
-	b.WriteString(dim.Render("↑/k up  ↓/j down  enter select  esc cancel"))
+	b.WriteString(format.StyleDim.Render("↑/k up  ↓/j down  enter select  esc cancel"))
 	b.WriteString("\n")
 
 	return b.String()

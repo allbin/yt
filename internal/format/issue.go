@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/lipgloss/table"
@@ -37,8 +38,7 @@ func JSON(w io.Writer, v any) error {
 func Issue(w io.Writer, issue *youtrack.Issue) error {
 	ew := &errWriter{w: w}
 
-	id := lipgloss.NewStyle().Bold(true).Foreground(ColorAccent).Render(issue.IDReadable)
-	ew.printf("%s  %s\n", id, styleBold.Render(issue.Summary))
+	ew.printf("%s  %s\n", StyleID.Render(issue.IDReadable), StyleBold.Render(issue.Summary))
 
 	state := issue.Field("State")
 	assignee := issue.Field("Assignee")
@@ -52,30 +52,30 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 		ew.println()
 	}
 	if state != "" {
-		ew.printf("  %s %s\n", styleLabel.Render("State"), lipgloss.NewStyle().Foreground(StateColor(state)).Render(state))
+		ew.printf("  %s %s\n", StyleLabel.Render("State"), lipgloss.NewStyle().Foreground(StateColor(state)).Render(state))
 	}
 	if assignee != "" {
-		ew.printf("  %s %s\n", styleLabel.Render("Assignee"), assignee)
+		ew.printf("  %s %s\n", StyleLabel.Render("Assignee"), assignee)
 	}
 	if priority != "" {
-		ew.printf("  %s %s\n", styleLabel.Render("Priority"), lipgloss.NewStyle().Foreground(PriorityColor(priority)).Render(priority))
+		ew.printf("  %s %s\n", StyleLabel.Render("Priority"), lipgloss.NewStyle().Foreground(PriorityColor(priority)).Render(priority))
 	}
 	if typ != "" {
-		ew.printf("  %s %s\n", styleLabel.Render("Type"), typ)
+		ew.printf("  %s %s\n", StyleLabel.Render("Type"), typ)
 	}
 	if subsystem != "" {
-		ew.printf("  %s %s\n", styleLabel.Render("Subsystem"), subsystem)
+		ew.printf("  %s %s\n", StyleLabel.Render("Subsystem"), subsystem)
 	}
 	if tags != "" {
-		ew.printf("  %s %s\n", styleLabel.Render("Tags"), styleDim.Render(tags))
+		ew.printf("  %s %s\n", StyleLabel.Render("Tags"), StyleDim.Render(tags))
 	}
 
 	desc := issue.Desc()
 	if desc != "" {
 		ew.println()
-		ew.println(styleRule.Render("────────────────────────────────────"))
-		ew.println()
-		ew.println(desc)
+		ew.println(StyleRule.Render("────────────────────────────────────"))
+		rendered := strings.Trim(RenderMarkdown(desc, 80), "\n")
+		ew.println(rendered)
 	}
 
 	return ew.err
@@ -83,7 +83,7 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 
 func IssueList(w io.Writer, issues []youtrack.Issue) error {
 	if len(issues) == 0 {
-		_, err := fmt.Fprintln(w, styleDim.Render("No issues found."))
+		_, err := fmt.Fprintln(w, StyleDim.Render("No issues found."))
 		return err
 	}
 	_, err := fmt.Fprintln(w, issueTable(issues))

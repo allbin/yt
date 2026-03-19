@@ -11,7 +11,7 @@ const commentFields = "id,text,author(login,fullName),created,updated"
 func (c *Client) ListComments(issueID string) ([]Comment, error) {
 	params := url.Values{"fields": {commentFields}}
 
-	data, err := c.get("/api/issues/"+issueID+"/comments", params)
+	data, err := c.get("/api/issues/"+url.PathEscape(issueID)+"/comments", params)
 	if err != nil {
 		return nil, fmt.Errorf("list comments for %s: %w", issueID, err)
 	}
@@ -30,7 +30,7 @@ func (c *Client) AddComment(issueID, text string) (*Comment, error) {
 	}{Text: text}
 
 	params := url.Values{"fields": {commentFields}}
-	path := "/api/issues/" + issueID + "/comments?" + params.Encode()
+	path := "/api/issues/" + url.PathEscape(issueID) + "/comments?" + params.Encode()
 
 	data, err := c.postJSON(path, body)
 	if err != nil {

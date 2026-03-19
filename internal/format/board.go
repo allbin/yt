@@ -13,7 +13,7 @@ import (
 
 func BoardList(w io.Writer, boards []youtrack.Agile) error {
 	if len(boards) == 0 {
-		_, err := fmt.Fprintln(w, styleDim.Render("No boards found."))
+		_, err := fmt.Fprintln(w, StyleDim.Render("No boards found."))
 		return err
 	}
 
@@ -45,12 +45,12 @@ func SprintIssues(w io.Writer, board, sprint string, issues []youtrack.Issue) er
 	ew := &errWriter{w: w}
 
 	header := lipgloss.NewStyle().Bold(true).Foreground(ColorAccent).Render(board)
-	sprintName := styleBold.Render(sprint)
-	count := styleDim.Render(fmt.Sprintf("(%d issues)", len(issues)))
+	sprintName := StyleBold.Render(sprint)
+	count := StyleDim.Render(fmt.Sprintf("(%d issues)", len(issues)))
 	ew.printf("%s — %s  %s\n\n", header, sprintName, count)
 
 	if len(issues) == 0 {
-		ew.println(styleDim.Render("No issues."))
+		ew.println(StyleDim.Render("No issues."))
 		return ew.err
 	}
 

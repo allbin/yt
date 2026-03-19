@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/allbin/yt/internal/format"
-	"github.com/allbin/yt/internal/git"
 	"github.com/spf13/cobra"
 )
 
@@ -34,18 +33,9 @@ func init() {
 }
 
 func runIssue(cmd *cobra.Command, args []string) error {
-	id := ""
-	if len(args) > 0 {
-		id = args[0]
-	} else {
-		branch, err := git.CurrentBranch()
-		if err != nil {
-			return cmd.Help()
-		}
-		id = git.IssueFromBranch(branch)
-		if id == "" {
-			return cmd.Help()
-		}
+	id := issueIDFromArgs(args)
+	if id == "" {
+		return cmd.Help()
 	}
 
 	client, err := newClient()

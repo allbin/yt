@@ -14,7 +14,7 @@ const issueFields = "idReadable,summary,description,resolved,created,updated," +
 func (c *Client) GetIssue(id string) (*Issue, error) {
 	params := url.Values{"fields": {issueFields}}
 
-	data, err := c.get("/api/issues/"+id, params)
+	data, err := c.get("/api/issues/"+url.PathEscape(id), params)
 	if err != nil {
 		return nil, fmt.Errorf("fetch %s: %w", id, err)
 	}

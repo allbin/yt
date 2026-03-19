@@ -18,15 +18,20 @@ var (
 )
 
 var (
-	styleLabel = lipgloss.NewStyle().Foreground(ColorDim).Width(12)
-	styleBold  = lipgloss.NewStyle().Bold(true)
-	styleDim   = lipgloss.NewStyle().Foreground(ColorDim)
-	styleRule  = lipgloss.NewStyle().Foreground(ColorBorder)
+	StyleLabel = lipgloss.NewStyle().Foreground(ColorDim).Width(12)
+	StyleBold  = lipgloss.NewStyle().Bold(true)
+	StyleDim   = lipgloss.NewStyle().Foreground(ColorDim)
+	StyleRule  = lipgloss.NewStyle().Foreground(ColorBorder)
+	StyleID    = lipgloss.NewStyle().Bold(true).Foreground(ColorAccent)
 )
 
 func StateColor(state string) lipgloss.TerminalColor {
 	lower := strings.ToLower(state)
 	switch {
+	// Terminal/rejected states must be checked before "complete"/"new" to
+	// avoid substring collisions (e.g. "incomplete" contains "complete").
+	case containsAny(lower, "obsolete", "duplicate", "won't fix", "can't reproduce", "incomplete"):
+		return ColorDim
 	case containsAny(lower, "done", "resolved", "fixed", "verified", "complete", "closed"):
 		return ColorGreen
 	case containsAny(lower, "review", "test", "testing"):
@@ -37,8 +42,6 @@ func StateColor(state string) lipgloss.TerminalColor {
 		return ColorDim
 	case containsAny(lower, "open", "submitted", "new", "reopened"):
 		return ColorYellow
-	case containsAny(lower, "obsolete", "duplicate", "won't fix", "can't reproduce", "incomplete"):
-		return ColorDim
 	default:
 		return lipgloss.NoColor{}
 	}

@@ -12,7 +12,7 @@ import (
 
 func ProjectList(w io.Writer, projects []youtrack.Project) error {
 	if len(projects) == 0 {
-		_, err := fmt.Fprintln(w, styleDim.Render("No projects found."))
+		_, err := fmt.Fprintln(w, StyleDim.Render("No projects found."))
 		return err
 	}
 

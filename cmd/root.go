@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/allbin/yt/internal/git"
 	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -76,6 +77,19 @@ func newClient() (youtrack.API, error) {
 		return nil, fmt.Errorf("YOUTRACK_TOKEN not set")
 	}
 	return youtrack.NewClient(u, token), nil
+}
+
+// issueIDFromArgs resolves an issue ID from command args or the current git branch.
+// Returns "" if no ID could be determined.
+func issueIDFromArgs(args []string) string {
+	if len(args) > 0 {
+		return args[0]
+	}
+	branch, err := git.CurrentBranch()
+	if err != nil {
+		return ""
+	}
+	return git.IssueFromBranch(branch)
 }
 
 // resolveAssignee converts a user-provided assignee value (full name, partial,

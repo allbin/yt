@@ -8,7 +8,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/allbin/yt/internal/format"
-	"github.com/allbin/yt/internal/git"
 	"github.com/allbin/yt/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -37,18 +36,9 @@ func init() {
 }
 
 func runIssueState(cmd *cobra.Command, args []string) error {
-	id := ""
-	if len(args) > 0 {
-		id = args[0]
-	} else {
-		branch, err := git.CurrentBranch()
-		if err != nil {
-			return cmd.Help()
-		}
-		id = git.IssueFromBranch(branch)
-		if id == "" {
-			return cmd.Help()
-		}
+	id := issueIDFromArgs(args)
+	if id == "" {
+		return cmd.Help()
 	}
 
 	client, err := newClient()
@@ -74,7 +64,11 @@ func runIssueState(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	result := finalModel.(tui.StatePicker).Result()
+	picker, ok := finalModel.(tui.StatePicker)
+	if !ok {
+		return fmt.Errorf("unexpected state from picker")
+	}
+	result := picker.Result()
 	if result.Cancelled || result.State == currentState {
 		return nil
 	}
@@ -91,9 +85,8 @@ func runIssueState(cmd *cobra.Command, args []string) error {
 		return format.JSON(os.Stdout, issue)
 	}
 
-	dim := lipgloss.NewStyle().Foreground(format.ColorDim)
 	from := lipgloss.NewStyle().Foreground(format.StateColor(currentState)).Render(currentState)
 	to := lipgloss.NewStyle().Foreground(format.StateColor(result.State)).Render(result.State)
-	_, err = fmt.Fprintf(os.Stdout, "%s %s %s %s\n", issue.IDReadable, from, dim.Render("→"), to)
+	_, err = fmt.Fprintf(os.Stdout, "%s %s %s %s\n", issue.IDReadable, from, format.StyleDim.Render("→"), to)
 	return err
 }

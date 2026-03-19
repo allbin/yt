@@ -12,7 +12,7 @@ const stateFields = "name,value(name),projectCustomField(bundle(values(name,ordi
 func (c *Client) GetIssueStates(issueID string) ([]StateBundleElement, error) {
 	params := url.Values{"fields": {stateFields}}
 
-	data, err := c.get(fmt.Sprintf("/api/issues/%s/customFields", issueID), params)
+	data, err := c.get("/api/issues/"+url.PathEscape(issueID)+"/customFields", params)
 	if err != nil {
 		return nil, fmt.Errorf("fetch states for %s: %w", issueID, err)
 	}
@@ -37,6 +37,9 @@ func (c *Client) GetIssueStates(issueID string) ([]StateBundleElement, error) {
 			return nil, fmt.Errorf("no state bundle found for %s", issueID)
 		}
 		states := f.ProjectCustomField.Bundle.Values
+		if len(states) == 0 {
+			return nil, fmt.Errorf("empty state bundle for %s", issueID)
+		}
 		sort.Slice(states, func(i, j int) bool {
 			return states[i].Ordinal < states[j].Ordinal
 		})
@@ -58,7 +61,7 @@ func (c *Client) SetIssueState(issueID, stateName string) error {
 			},
 		},
 	}
-	if err := c.post(fmt.Sprintf("/api/issues/%s", issueID), body); err != nil {
+	if err := c.post("/api/issues/"+url.PathEscape(issueID), body); err != nil {
 		return fmt.Errorf("set state on %s: %w", issueID, err)
 	}
 	return nil
