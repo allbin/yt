@@ -19,6 +19,8 @@ Requires YOUTRACK_URL and YOUTRACK_TOKEN environment variables.
 ### SEE ALSO
 
 * [yt board](yt_board.md)	 - Show board issues or list boards
+* [yt branch](yt_branch.md)	 - Create git branch from issue
 * [yt install](yt_install.md)	 - Install shell completions and Claude Code skill
 * [yt issue](yt_issue.md)	 - Show or manage YouTrack issues
+* [yt project](yt_project.md)	 - Manage YouTrack projects
 

@@ -1,6 +1,6 @@
 ---
 name: yt
-description: "Interact with YouTrack: fetch issue details, list/filter issues, view agile board sprints. Use when referencing issue keys (e.g. PROJ-123), searching issues, or checking board status."
+description: "Interact with YouTrack: fetch issue details, list/filter issues, view boards, create branches. Use when referencing issue keys (e.g. PROJ-123), searching issues, or checking board status."
 argument-hint: <issue-id>
 allowed-tools: Bash(yt *)
 ---
@@ -15,6 +15,12 @@ If `$ARGUMENTS` looks like an issue ID (e.g. PROJ-123):
 
 ```bash
 yt issue $ARGUMENTS --json
+```
+
+With no ID, auto-detects from the current git branch name:
+
+```bash
+yt issue --json
 ```
 
 ## List and filter issues
@@ -45,6 +51,21 @@ yt board <name> --json [-s state] [-a assignee] [-q query] [--sprint name]
 ```
 
 Board name matching is case-insensitive. Assignee supports "me", login, or full name.
+
+## Git integration
+
+Create a branch from an issue:
+
+```bash
+yt branch <ID>           # e.g. proj-123-slugified-summary
+yt branch <ID> --no-slug # e.g. proj-123
+```
+
+## Projects
+
+```bash
+yt project list --json
+```
 
 ## Presenting results
 

@@ -46,7 +46,7 @@ func initConfig() {
 	_ = viper.ReadInConfig()
 }
 
-func newClient() (*youtrack.Client, error) {
+func newClient() (youtrack.API, error) {
 	u := viper.GetString("URL")
 	token := viper.GetString("TOKEN")
 	if u == "" {
@@ -61,7 +61,7 @@ func newClient() (*youtrack.Client, error) {
 // resolveAssignee converts a user-provided assignee value (full name, partial,
 // or login) to a YouTrack login for use in queries. Special values like "me"
 // pass through unchanged.
-func resolveAssignee(client *youtrack.Client, assignee string) (string, error) {
+func resolveAssignee(client youtrack.API, assignee string) (string, error) {
 	if assignee == "" {
 		return "", nil
 	}

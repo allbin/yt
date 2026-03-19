@@ -114,7 +114,9 @@ type Agile struct {
 }
 
 type Project struct {
+	ID        string `json:"id,omitempty"`
 	ShortName string `json:"shortName"`
+	Name      string `json:"name,omitempty"`
 }
 
 type Sprint struct {
