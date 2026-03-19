@@ -105,6 +105,14 @@ func (i *Issue) Desc() string {
 	return *i.Description
 }
 
+type Comment struct {
+	ID      string `json:"id"`
+	Text    string `json:"text"`
+	Author  *User  `json:"author"`
+	Created int64  `json:"created"`
+	Updated *int64 `json:"updated"`
+}
+
 type Agile struct {
 	ID            string    `json:"id"`
 	Name          string    `json:"name"`

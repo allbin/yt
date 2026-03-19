@@ -8,4 +8,8 @@ type API interface {
 	GetBoardByName(name string) (*Agile, error)
 	ListProjects() ([]Project, error)
 	ResolveUser(query string) (string, error)
+	UpdateIssue(id string, command string) error
+	ListComments(issueID string) ([]Comment, error)
+	AddComment(issueID, text string) (*Comment, error)
+	CreateIssue(project, summary, description string) (*Issue, error)
 }

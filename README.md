@@ -27,33 +27,44 @@ token: perm:your-token-here
 ## Usage
 
 ```bash
-# Fetch an issue
+# Fetch an issue (or auto-detect from git branch)
 yt issue PROJ-123
+yt issue
 
-# JSON output
-yt issue PROJ-123 --json
+# Create, update, comment
+yt issue create -p PROJ -s "Fix login bug"
+yt issue update PROJ-123 -s "In Progress" -a me
+yt issue comment PROJ-123 -m "Started working on this"
 
-# List issues in a project
-yt issue list -p PROJ
-
-# Filter by state and assignee
+# List and filter issues
 yt issue list -p PROJ -s "In Progress" -a me
-
-# Raw YouTrack query
 yt issue list -q "tag: {Ready for QA} sort by: updated desc"
 
-# Limit results
-yt issue list -p PROJ -n 5 --json
+# Agile boards
+yt board list
+yt board HållKoll -a me
+yt board HållKoll -s "In Review" --json
+
+# Git integration
+yt branch PROJ-123         # creates proj-123-slugified-summary
+yt branch PROJ-123 --no-slug
+
+# Projects
+yt project list
+
+# Read comments
+yt issue comments PROJ-123
 ```
+
+All commands support `--json` for structured output.
 
 ## Setup
 
 ```bash
-# Install fish/bash/zsh completions (auto-detects shell)
+# Shell completions (auto-detects shell)
 yt install completion
-yt install completion --shell fish
 
-# Install Claude Code skill
+# Claude Code skill
 yt install skill
 ```
 

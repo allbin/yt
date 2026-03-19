@@ -27,6 +27,47 @@ func (c *Client) GetIssue(id string) (*Issue, error) {
 	return &issue, nil
 }
 
+func (c *Client) UpdateIssue(id string, command string) error {
+	body := struct {
+		Query  string `json:"query"`
+		Issues []struct {
+			IDReadable string `json:"idReadable"`
+		} `json:"issues"`
+	}{
+		Query:  command,
+		Issues: []struct{ IDReadable string `json:"idReadable"` }{{IDReadable: id}},
+	}
+	if err := c.post("/api/commands", body); err != nil {
+		return fmt.Errorf("update %s: %w", id, err)
+	}
+	return nil
+}
+
+func (c *Client) CreateIssue(project, summary, description string) (*Issue, error) {
+	body := struct {
+		Project     struct{ ShortName string `json:"shortName"` } `json:"project"`
+		Summary     string                                        `json:"summary"`
+		Description string                                        `json:"description,omitempty"`
+	}{
+		Summary:     summary,
+		Description: description,
+	}
+	body.Project.ShortName = project
+
+	path := "/api/issues?fields=" + url.QueryEscape(issueFields)
+	data, err := c.postJSON(path, body)
+	if err != nil {
+		return nil, fmt.Errorf("create issue: %w", err)
+	}
+
+	var issue Issue
+	if err := json.Unmarshal(data, &issue); err != nil {
+		return nil, fmt.Errorf("parse created issue: %w", err)
+	}
+
+	return &issue, nil
+}
+
 func (c *Client) ListIssues(query string, limit int) ([]Issue, error) {
 	params := url.Values{"fields": {issueFields}}
 	if query != "" {
