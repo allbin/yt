@@ -6,67 +6,27 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/allbin/yt/internal/board"
 	"github.com/allbin/yt/internal/format"
 )
 
-const (
-	minColWidth    = 28
-	minimizedWidth = 5 // 1 char text + 2 padding + 2 border
-)
-
-func (m *BoardViewer) columnWidths() []int {
-	numCols := len(m.columns)
-	widths := make([]int, numCols)
-
-	minimizedSpace := 0
-	visibleCount := 0
-	for _, col := range m.columns {
-		if col.minimized {
-			minimizedSpace += minimizedWidth
-		} else {
-			visibleCount++
-		}
-	}
-	if visibleCount == 0 {
-		for i := range widths {
-			widths[i] = minimizedWidth
-		}
-		return widths
-	}
-
-	available := max(m.width-minimizedSpace, minColWidth)
-	maxFit := max(available/minColWidth, 1)
-	colWidth := minColWidth
-	if visibleCount <= maxFit {
-		colWidth = available / visibleCount
-	}
-
-	for i, col := range m.columns {
-		if col.minimized {
-			widths[i] = minimizedWidth
-		} else {
-			widths[i] = colWidth
-		}
-	}
-	return widths
-}
-
 func (m *BoardViewer) renderColumn(colIdx, width int) string {
-	col := m.columns[colIdx]
-	isFocused := colIdx == m.cursor.col
+	columns := m.grid.Columns()
+	col := columns[colIdx]
+	curCol, curSL, curRow := m.grid.CursorPos()
+	isFocused := colIdx == curCol
 
-	if col.minimized {
+	if col.Minimized {
 		return m.renderMinimizedColumn(col, isFocused)
 	}
 
 	innerWidth := max(width-4, 10)
 
-	count := m.columnIssueCount(colIdx)
 	prefix := ""
-	if col.isResolved {
+	if col.IsResolved {
 		prefix = "\uf00c "
 	}
-	header := fmt.Sprintf("%s%s (%d)", prefix, col.presentation, count)
+	header := fmt.Sprintf("%s%s (%d)", prefix, col.Presentation, col.IssueCount)
 	textArea := max(innerWidth-2, 1)
 	if lipgloss.Width(header) > textArea {
 		header = truncateToWidth(header, textArea)
@@ -84,30 +44,31 @@ func (m *BoardViewer) renderColumn(colIdx, width int) string {
 		content.WriteString(format.StyleBold.Render(header))
 	}
 
-	numSL := m.numSwimlanes()
+	swimlanes := m.grid.Swimlanes()
+	numSL := m.grid.NumSwimlanes()
 	for sl := range numSL {
-		if len(m.swimlanes) > 0 {
-			slDef := m.swimlanes[sl]
-			issues := m.issues[colIdx][sl]
+		if len(swimlanes) > 0 {
+			slDef := swimlanes[sl]
+			issues := m.grid.CellIssues(colIdx, sl)
 			count := len(issues)
-			cursorHere := isFocused && sl == m.cursor.swimlane
+			cursorHere := isFocused && sl == curSL
 
 			if count == 0 && !cursorHere {
 				continue
 			}
 
 			content.WriteString("\n")
-			content.WriteString(m.renderSwimlaneDivider(slDef, count, innerWidth, isFocused, cursorHere))
+			content.WriteString(renderSwimlaneDivider(slDef, count, innerWidth, isFocused, cursorHere))
 
-			if slDef.collapsed {
+			if slDef.Collapsed {
 				continue
 			}
 		}
 
-		issues := m.issues[colIdx][sl]
+		issues := m.grid.CellIssues(colIdx, sl)
 		for ri, issue := range issues {
 			content.WriteString("\n")
-			focused := isFocused && sl == m.cursor.swimlane && ri == m.cursor.row
+			focused := isFocused && sl == curSL && ri == curRow
 			content.WriteString(renderCard(issue, innerWidth, focused, !isFocused))
 		}
 	}
@@ -125,14 +86,14 @@ func (m *BoardViewer) renderColumn(colIdx, width int) string {
 	return style.Render(content.String())
 }
 
-func (m *BoardViewer) renderMinimizedColumn(col columnDef, focused bool) string {
+func (m *BoardViewer) renderMinimizedColumn(col board.Column, focused bool) string {
 	borderColor := lipgloss.TerminalColor(format.ColorDim)
 	if focused {
 		borderColor = columnColor(col)
 	}
 
 	var lines []string
-	for _, r := range col.presentation {
+	for _, r := range col.Presentation {
 		lines = append(lines, string(r))
 	}
 	if len(lines) == 0 {
@@ -149,13 +110,13 @@ func (m *BoardViewer) renderMinimizedColumn(col columnDef, focused bool) string 
 	return style.Render(strings.Join(lines, "\n"))
 }
 
-func (m *BoardViewer) renderSwimlaneDivider(sl swimlaneDef, count, width int, colFocused, slFocused bool) string {
+func renderSwimlaneDivider(sl board.Swimlane, count, width int, colFocused, slFocused bool) string {
 	indicator := "\u25be" // ▾ expanded
-	if sl.collapsed {
+	if sl.Collapsed {
 		indicator = "\u25b8" // ▸ collapsed
 	}
 
-	label := sl.name
+	label := sl.Name
 	countStr := fmt.Sprintf(" (%d)", count)
 
 	maxLabel := width - 2 - lipgloss.Width(countStr) - 3
@@ -179,29 +140,23 @@ func (m *BoardViewer) renderSwimlaneDivider(sl swimlaneDef, count, width int, co
 	return line
 }
 
-func columnColor(col columnDef) lipgloss.TerminalColor {
-	if len(col.stateNames) > 0 {
-		return format.StateColor(col.stateNames[0])
+func columnColor(col board.Column) lipgloss.TerminalColor {
+	if len(col.StateNames) > 0 {
+		return format.StateColor(col.StateNames[0])
 	}
 	return format.ColorBorder
-}
-
-func (m *BoardViewer) columnIssueCount(colIdx int) int {
-	count := 0
-	for sl := range m.numSwimlanes() {
-		count += len(m.issues[colIdx][sl])
-	}
-	return count
 }
 
 // --- Swimlane row-major rendering ---
 
 func (m *BoardViewer) renderColumnHeader(colIdx, width int) string {
-	col := m.columns[colIdx]
-	isFocused := colIdx == m.cursor.col
+	columns := m.grid.Columns()
+	col := columns[colIdx]
+	curCol, _, _ := m.grid.CursorPos()
+	isFocused := colIdx == curCol
 
-	if col.minimized {
-		ch := string([]rune(col.presentation)[0])
+	if col.Minimized {
+		ch := string([]rune(col.Presentation)[0])
 		style := lipgloss.NewStyle().Width(width).Align(lipgloss.Center)
 		if isFocused {
 			style = style.Foreground(columnColor(col))
@@ -211,12 +166,10 @@ func (m *BoardViewer) renderColumnHeader(colIdx, width int) string {
 		return style.Render(ch)
 	}
 
-	count := m.columnIssueCount(colIdx)
-	prefix := ""
-	if col.isResolved {
-		prefix = "\uf00c "
+	header := fmt.Sprintf("%s (%d)", col.Presentation, col.IssueCount)
+	if col.IsResolved {
+		header = "\uf00c " + header
 	}
-	header := fmt.Sprintf("%s%s (%d)", prefix, col.presentation, count)
 	if lipgloss.Width(header) > width-2 {
 		header = truncateToWidth(header, width-3) + "\u2026"
 	}
@@ -231,20 +184,23 @@ func (m *BoardViewer) renderColumnHeader(colIdx, width int) string {
 }
 
 func (m *BoardViewer) renderSwimlaneBanner(slIdx, totalWidth int) string {
-	sl := m.swimlanes[slIdx]
-	isFocused := m.cursor.swimlane == slIdx
+	swimlanes := m.grid.Swimlanes()
+	sl := swimlanes[slIdx]
+	_, curSL, _ := m.grid.CursorPos()
+	isFocused := curSL == slIdx
 
 	indicator := "\u25be" // ▾
-	if sl.collapsed {
+	if sl.Collapsed {
 		indicator = "\u25b8" // ▸
 	}
 
 	total := 0
-	for ci := range m.columns {
-		total += len(m.issues[ci][slIdx])
+	columns := m.grid.Columns()
+	for ci := range columns {
+		total += len(m.grid.CellIssues(ci, slIdx))
 	}
 
-	label := sl.name
+	label := sl.Name
 	countStr := fmt.Sprintf(" (%d)", total)
 	maxLabel := totalWidth - 4 - lipgloss.Width(countStr)
 	if maxLabel > 0 && lipgloss.Width(label) > maxLabel {
@@ -265,25 +221,26 @@ func (m *BoardViewer) renderSwimlaneBanner(slIdx, totalWidth int) string {
 }
 
 func (m *BoardViewer) renderColumnCell(colIdx, slIdx, width int) string {
-	col := m.columns[colIdx]
-	if col.minimized {
+	columns := m.grid.Columns()
+	col := columns[colIdx]
+	if col.Minimized {
 		return lipgloss.NewStyle().Width(width).Render("")
 	}
 
-	colFocused := colIdx == m.cursor.col
-	slFocused := slIdx == m.cursor.swimlane
-	issues := m.issues[colIdx][slIdx]
-	innerWidth := max(width-2, 10) // account for padding
+	curCol, curSL, curRow := m.grid.CursorPos()
+	colFocused := colIdx == curCol
+	slFocused := slIdx == curSL
+	issues := m.grid.CellIssues(colIdx, slIdx)
+	innerWidth := max(width-2, 10)
 
 	var b strings.Builder
 	for i, issue := range issues {
 		if i > 0 {
 			b.WriteString("\n")
 		}
-		focused := colFocused && slFocused && i == m.cursor.row
+		focused := colFocused && slFocused && i == curRow
 		b.WriteString(renderCard(issue, innerWidth, focused, !colFocused))
 	}
 
 	return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(b.String())
 }
-

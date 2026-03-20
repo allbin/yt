@@ -48,6 +48,9 @@ func NewStatePicker(issueID, summary, currentState string, states []youtrack.Sta
 // Result returns the picker outcome after Run completes.
 func (m StatePicker) Result() StateResult { return m.result }
 
+// Done reports whether the picker has produced a result.
+func (m StatePicker) Done() bool { return m.result.State != "" || m.result.Cancelled }
+
 func (m StatePicker) Init() tea.Cmd { return nil }
 
 func (m StatePicker) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

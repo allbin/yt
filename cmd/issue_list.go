@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/allbin/yt/internal/format"
 	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
@@ -48,7 +46,7 @@ func init() {
 }
 
 func runIssueList(cmd *cobra.Command, args []string) error {
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -65,9 +63,10 @@ func runIssueList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if jsonOutput {
-		return format.JSON(os.Stdout, issues)
+		return format.JSON(w, issues)
 	}
-	return format.IssueList(os.Stdout, issues)
+	return format.IssueList(w, issues)
 }
 

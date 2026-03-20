@@ -12,8 +12,9 @@ import (
 const minCardInnerWidth = 16
 
 func renderCard(issue youtrack.Issue, width int, focused, dimmed bool) string {
+	v := issue.View()
 	border := lipgloss.RoundedBorder()
-	borderColor := format.StateColor(issue.Field("State"))
+	borderColor := format.StateColor(v.State)
 	if focused {
 		border = lipgloss.ThickBorder()
 		borderColor = format.ColorAccent
@@ -36,16 +37,15 @@ func renderCard(issue youtrack.Issue, width int, focused, dimmed bool) string {
 	var lines []string
 
 	// Line 1: ID + priority
-	priority := issue.Field("Priority")
-	icon := priorityIcon(priority)
+	icon := priorityIcon(v.Priority)
 	dimStyle := lipgloss.NewStyle().Foreground(format.ColorDim)
 
-	id := format.StyleID.Render(issue.IDReadable)
+	id := format.StyleID.Render(v.ID)
 	if dimmed {
-		id = dimStyle.Render(issue.IDReadable)
+		id = dimStyle.Render(v.ID)
 	}
 	if icon != "" {
-		pColor := format.PriorityColor(priority)
+		pColor := format.PriorityColor(v.Priority)
 		pStyle := lipgloss.NewStyle().Foreground(pColor)
 		if dimmed {
 			pStyle = dimStyle
@@ -58,7 +58,7 @@ func renderCard(issue youtrack.Issue, width int, focused, dimmed bool) string {
 	}
 
 	// Summary lines
-	wrapped := wrapText(issue.Summary, innerWidth-2)
+	wrapped := wrapText(v.Summary, innerWidth-2)
 	if dimmed {
 		for i, line := range wrapped {
 			wrapped[i] = dimStyle.Render(line)
@@ -67,9 +67,8 @@ func renderCard(issue youtrack.Issue, width int, focused, dimmed bool) string {
 	lines = append(lines, wrapped...)
 
 	// Assignee
-	assignee := issue.Field("Assignee")
-	if assignee != "" {
-		lines = append(lines, format.StyleDim.Render("\uf007 "+assignee))
+	if v.Assignee != "" {
+		lines = append(lines, format.StyleDim.Render("\uf007 "+v.Assignee))
 	}
 
 	content := strings.Join(lines, "\n")

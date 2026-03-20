@@ -10,14 +10,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/allbin/yt/internal/format"
+	"github.com/allbin/yt/internal/tui/modal"
 	"github.com/allbin/yt/internal/youtrack"
-)
-
-type viewerMode int
-
-const (
-	modeNormal viewerMode = iota
-	modeStatePicker
 )
 
 type issueLoadedMsg struct {
@@ -46,9 +40,11 @@ type IssueViewer struct {
 	width        int
 	height       int
 
-	mode        viewerMode
-	statePicker StatePicker
+	modals modal.Stack
 }
+
+// Done reports whether the viewer has been closed (always false — standalone viewer).
+func (m IssueViewer) Done() bool { return false }
 
 func NewIssueViewer(client youtrack.API, issueID string) IssueViewer {
 	return IssueViewer{
@@ -66,14 +62,26 @@ func (m IssueViewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if wsm, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width = wsm.Width
 		m.height = wsm.Height
+		if m.modals.Active() {
+			_, cmd := m.modals.Update(wsm)
+			return m, cmd
+		}
 		if m.issue != nil {
 			m.rebuildContent()
 		}
 		return m, nil
 	}
 
-	if m.mode == modeStatePicker {
-		return m.updateStatePicker(msg)
+	if m.modals.Active() {
+		popped, cmd := m.modals.Update(msg)
+		if popped != nil {
+			resultCmd := m.handleModalResult(popped)
+			if resultCmd != nil {
+				m.loading = true
+			}
+			return m, tea.Batch(cmd, resultCmd)
+		}
+		return m, cmd
 	}
 
 	switch msg := msg.(type) {
@@ -103,6 +111,16 @@ func (m IssueViewer) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m IssueViewer) handleModalResult(popped modal.Modal) tea.Cmd {
+	if sp, ok := popped.(StatePicker); ok {
+		r := sp.Result()
+		if !r.Cancelled && r.State != m.issue.View().State {
+			return setStateCmd(m.client, m.issueID, r.State)
+		}
+	}
+	return nil
 }
 
 func (m *IssueViewer) rebuildContent() {
@@ -144,11 +162,9 @@ func (m IssueViewer) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.scrollOffset = m.maxScroll()
 	case "s":
 		if m.issue != nil && len(m.states) > 0 {
-			m.statePicker = NewStatePicker(
-				m.issue.IDReadable, m.issue.Summary,
-				m.issue.Field("State"), m.states,
-			)
-			m.mode = modeStatePicker
+			v := m.issue.View()
+			sp := NewStatePicker(v.ID, v.Summary, v.State, m.states)
+			m.modals.Push(sp)
 		}
 	case "r":
 		m.loading = true
@@ -158,32 +174,15 @@ func (m IssueViewer) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m IssueViewer) updateStatePicker(msg tea.Msg) (tea.Model, tea.Cmd) {
-	updated, cmd := m.statePicker.Update(msg)
-	m.statePicker = updated.(StatePicker)
-
-	result := m.statePicker.Result()
-	if !result.Cancelled && result.State == "" {
-		return m, cmd
-	}
-
-	m.mode = modeNormal
-	if !result.Cancelled && result.State != m.issue.Field("State") {
-		m.loading = true
-		return m, setStateCmd(m.client, m.issueID, result.State)
-	}
-	return m, nil
-}
-
 func (m IssueViewer) View() string {
-	if m.mode == modeStatePicker {
-		return m.statePicker.View()
+	if m.modals.Active() {
+		return m.modals.View()
 	}
 	if m.err != nil {
 		return fmt.Sprintf("error: %v\n\npress q to quit\n", m.err)
 	}
 	if m.loading || m.issue == nil {
-		return "Loading…\n"
+		return "Loading\u2026\n"
 	}
 
 	var b strings.Builder
@@ -213,18 +212,18 @@ func (m IssueViewer) maxScroll() int {
 	return max(len(m.lines)-m.viewportHeight(), 0)
 }
 
-// renderHeader builds the fixed header: ID, summary, metadata grid, rule.
 func (m IssueViewer) renderHeader() string {
+	v := m.issue.View()
 	var b strings.Builder
 
-	fmt.Fprintf(&b, "%s  %s\n", format.StyleID.Render(m.issue.IDReadable), format.StyleBold.Render(m.issue.Summary))
+	fmt.Fprintf(&b, "%s  %s\n", format.StyleID.Render(v.ID), format.StyleBold.Render(v.Summary))
 
-	state := m.issue.Field("State")
-	priority := m.issue.Field("Priority")
-	assignee := m.issue.Field("Assignee")
-	typ := m.issue.Field("Type")
-	subsystem := m.issue.Field("Subsystem")
-	tags := m.issue.TagNames()
+	state := v.State
+	priority := v.Priority
+	assignee := v.Assignee
+	typ := v.Type
+	subsystem := v.Subsystem
+	tags := v.Tags
 
 	if state+priority+assignee+typ+subsystem+tags != "" {
 		b.WriteString("\n")
@@ -241,7 +240,7 @@ func (m IssueViewer) renderHeader() string {
 
 	b.WriteString("\n")
 	ruleWidth := max(m.width, 40)
-	b.WriteString(format.StyleRule.Render(strings.Repeat("─", ruleWidth)))
+	b.WriteString(format.StyleRule.Render(strings.Repeat("\u2500", ruleWidth)))
 	b.WriteString("\n")
 
 	return b.String()
@@ -260,18 +259,17 @@ func writeMetaRow(b *strings.Builder, colWidth int, label1, val1, label2, val2 s
 	fmt.Fprintf(b, "%s\n", left)
 }
 
-// buildLines renders description + comments into scrollable lines.
 func (m IssueViewer) buildLines() []string {
 	if m.issue == nil {
 		return nil
 	}
 
 	w := max(m.width, 20)
-	border := format.StyleDim.Render("│")
+	border := format.StyleDim.Render("\u2502")
 
 	var lines []string
 
-	desc := m.issue.Desc()
+	desc := m.issue.View().Description
 	if desc != "" {
 		for _, line := range format.SplitRendered(format.RenderMarkdown(desc, w-2)) {
 			lines = append(lines, "  "+line)
@@ -285,19 +283,19 @@ func (m IssueViewer) buildLines() []string {
 	}
 
 	lines = append(lines, "")
-	header := fmt.Sprintf("── Comments (%d) ", len(m.comments))
+	header := fmt.Sprintf("\u2500\u2500 Comments (%d) ", len(m.comments))
 	if pad := w - 4 - lipgloss.Width(header); pad > 0 {
-		header += strings.Repeat("─", pad)
+		header += strings.Repeat("\u2500", pad)
 	}
 	lines = append(lines, "  "+format.StyleDim.Render(header))
 
 	for _, c := range m.comments {
 		lines = append(lines, "")
-		author := commentAuthor(c)
-		date := time.UnixMilli(c.Created).Format("2006-01-02 15:04")
+		cv := c.View()
+		date := time.UnixMilli(cv.Created).Format("2006-01-02 15:04")
 		lines = append(lines, fmt.Sprintf("  %s %s  %s",
 			border,
-			format.StyleBold.Render(author),
+			format.StyleBold.Render(cv.Author),
 			format.StyleDim.Render(date)))
 
 		for _, line := range format.SplitRendered(format.RenderMarkdown(c.Text, w-5)) {
@@ -306,16 +304,6 @@ func (m IssueViewer) buildLines() []string {
 	}
 
 	return lines
-}
-
-func commentAuthor(c youtrack.Comment) string {
-	if c.Author == nil {
-		return "Unknown"
-	}
-	if c.Author.FullName != "" {
-		return c.Author.FullName
-	}
-	return c.Author.Login
 }
 
 func (m IssueViewer) renderFooter() string {

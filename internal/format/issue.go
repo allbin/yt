@@ -36,45 +36,38 @@ func JSON(w io.Writer, v any) error {
 }
 
 func Issue(w io.Writer, issue *youtrack.Issue) error {
+	v := issue.View()
 	ew := &errWriter{w: w}
 
-	ew.printf("%s  %s\n", StyleID.Render(issue.IDReadable), StyleBold.Render(issue.Summary))
+	ew.printf("%s  %s\n", StyleID.Render(v.ID), StyleBold.Render(v.Summary))
 
-	state := issue.Field("State")
-	assignee := issue.Field("Assignee")
-	priority := issue.Field("Priority")
-	typ := issue.Field("Type")
-	subsystem := issue.Field("Subsystem")
-	tags := issue.TagNames()
-
-	hasMeta := state != "" || assignee != "" || priority != "" || typ != "" || subsystem != "" || tags != ""
+	hasMeta := v.State != "" || v.Assignee != "" || v.Priority != "" || v.Type != "" || v.Subsystem != "" || v.Tags != ""
 	if hasMeta {
 		ew.println()
 	}
-	if state != "" {
-		ew.printf("  %s %s\n", StyleLabel.Render("State"), lipgloss.NewStyle().Foreground(StateColor(state)).Render(state))
+	if v.State != "" {
+		ew.printf("  %s %s\n", StyleLabel.Render("State"), lipgloss.NewStyle().Foreground(StateColor(v.State)).Render(v.State))
 	}
-	if assignee != "" {
-		ew.printf("  %s %s\n", StyleLabel.Render("Assignee"), assignee)
+	if v.Assignee != "" {
+		ew.printf("  %s %s\n", StyleLabel.Render("Assignee"), v.Assignee)
 	}
-	if priority != "" {
-		ew.printf("  %s %s\n", StyleLabel.Render("Priority"), lipgloss.NewStyle().Foreground(PriorityColor(priority)).Render(priority))
+	if v.Priority != "" {
+		ew.printf("  %s %s\n", StyleLabel.Render("Priority"), lipgloss.NewStyle().Foreground(PriorityColor(v.Priority)).Render(v.Priority))
 	}
-	if typ != "" {
-		ew.printf("  %s %s\n", StyleLabel.Render("Type"), typ)
+	if v.Type != "" {
+		ew.printf("  %s %s\n", StyleLabel.Render("Type"), v.Type)
 	}
-	if subsystem != "" {
-		ew.printf("  %s %s\n", StyleLabel.Render("Subsystem"), subsystem)
+	if v.Subsystem != "" {
+		ew.printf("  %s %s\n", StyleLabel.Render("Subsystem"), v.Subsystem)
 	}
-	if tags != "" {
-		ew.printf("  %s %s\n", StyleLabel.Render("Tags"), StyleDim.Render(tags))
+	if v.Tags != "" {
+		ew.printf("  %s %s\n", StyleLabel.Render("Tags"), StyleDim.Render(v.Tags))
 	}
 
-	desc := issue.Desc()
-	if desc != "" {
+	if v.Description != "" {
 		ew.println()
 		ew.println(StyleRule.Render("────────────────────────────────────"))
-		rendered := strings.Trim(RenderMarkdown(desc, 80), "\n")
+		rendered := strings.Trim(RenderMarkdown(v.Description, 80), "\n")
 		ew.println(rendered)
 	}
 
@@ -91,6 +84,11 @@ func IssueList(w io.Writer, issues []youtrack.Issue) error {
 }
 
 func issueTable(issues []youtrack.Issue) string {
+	views := make([]youtrack.IssueView, len(issues))
+	for i := range issues {
+		views[i] = issues[i].View()
+	}
+
 	t := newTable("ID", "STATE", "PRIORITY", "ASSIGNEE", "SUMMARY").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			s := lipgloss.NewStyle().Padding(0, 1)
@@ -101,21 +99,15 @@ func issueTable(issues []youtrack.Issue) string {
 			case 0:
 				return s.Bold(true)
 			case 1:
-				return s.Foreground(StateColor(issues[row].Field("State")))
+				return s.Foreground(StateColor(views[row].State))
 			case 2:
-				return s.Foreground(PriorityColor(issues[row].Field("Priority")))
+				return s.Foreground(PriorityColor(views[row].Priority))
 			}
 			return s
 		})
 
-	for _, issue := range issues {
-		t.Row(
-			issue.IDReadable,
-			issue.Field("State"),
-			issue.Field("Priority"),
-			issue.Field("Assignee"),
-			issue.Summary,
-		)
+	for _, v := range views {
+		t.Row(v.ID, v.State, v.Priority, v.Assignee, v.Summary)
 	}
 
 	return t.Render()

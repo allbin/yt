@@ -83,11 +83,11 @@ func TestBoardViewerLoaded(t *testing.T) {
 	if v.loading {
 		t.Error("expected loading=false after load")
 	}
-	if len(v.columns) == 0 {
-		t.Error("expected columns to be parsed")
-	}
-	if len(v.issues) == 0 {
+	if v.grid == nil {
 		t.Error("expected grid to be built")
+	}
+	if len(v.grid.Columns()) == 0 {
+		t.Error("expected columns to be parsed")
 	}
 }
 
@@ -111,8 +111,9 @@ func TestBoardViewerColumnParsing(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
 	v := newLoadedBoard(api)
 
-	if len(v.columns) != 3 {
-		t.Fatalf("columns = %d, want 3", len(v.columns))
+	columns := v.grid.Columns()
+	if len(columns) != 3 {
+		t.Fatalf("columns = %d, want 3", len(columns))
 	}
 
 	want := []struct {
@@ -124,16 +125,16 @@ func TestBoardViewerColumnParsing(t *testing.T) {
 		{"Done", []string{"Done"}},
 	}
 	for i, w := range want {
-		if v.columns[i].presentation != w.presentation {
-			t.Errorf("col[%d].presentation = %q, want %q", i, v.columns[i].presentation, w.presentation)
+		if columns[i].Presentation != w.presentation {
+			t.Errorf("col[%d].Presentation = %q, want %q", i, columns[i].Presentation, w.presentation)
 		}
-		if len(v.columns[i].stateNames) != len(w.stateNames) {
-			t.Errorf("col[%d].stateNames len = %d, want %d", i, len(v.columns[i].stateNames), len(w.stateNames))
+		if len(columns[i].StateNames) != len(w.stateNames) {
+			t.Errorf("col[%d].StateNames len = %d, want %d", i, len(columns[i].StateNames), len(w.stateNames))
 			continue
 		}
 		for j, sn := range w.stateNames {
-			if v.columns[i].stateNames[j] != sn {
-				t.Errorf("col[%d].stateNames[%d] = %q, want %q", i, j, v.columns[i].stateNames[j], sn)
+			if columns[i].StateNames[j] != sn {
+				t.Errorf("col[%d].StateNames[%d] = %q, want %q", i, j, columns[i].StateNames[j], sn)
 			}
 		}
 	}
@@ -144,16 +145,16 @@ func TestBoardViewerGridBuilding(t *testing.T) {
 	v := newLoadedBoard(api)
 
 	// col 0 (Open): TEST-1, TEST-4
-	if len(v.issues[0][0]) != 2 {
-		t.Errorf("Open column = %d issues, want 2", len(v.issues[0][0]))
+	if len(v.grid.CellIssues(0, 0)) != 2 {
+		t.Errorf("Open column = %d issues, want 2", len(v.grid.CellIssues(0, 0)))
 	}
 	// col 1 (In Progress): TEST-2
-	if len(v.issues[1][0]) != 1 {
-		t.Errorf("In Progress column = %d issues, want 1", len(v.issues[1][0]))
+	if len(v.grid.CellIssues(1, 0)) != 1 {
+		t.Errorf("In Progress column = %d issues, want 1", len(v.grid.CellIssues(1, 0)))
 	}
 	// col 2 (Done): TEST-3
-	if len(v.issues[2][0]) != 1 {
-		t.Errorf("Done column = %d issues, want 1", len(v.issues[2][0]))
+	if len(v.grid.CellIssues(2, 0)) != 1 {
+		t.Errorf("Done column = %d issues, want 1", len(v.grid.CellIssues(2, 0)))
 	}
 }
 
@@ -161,44 +162,48 @@ func TestBoardViewerNavigateColumns(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
 	v := newLoadedBoard(api)
 
-	if v.cursor.col != 0 {
-		t.Fatalf("initial col = %d, want 0", v.cursor.col)
+	col, _, _ := v.grid.CursorPos()
+	if col != 0 {
+		t.Fatalf("initial col = %d, want 0", col)
 	}
 
-	// Move right
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
 	v = m.(BoardViewer)
-	if v.cursor.col != 1 {
-		t.Errorf("after l: col = %d, want 1", v.cursor.col)
+	col, _, _ = v.grid.CursorPos()
+	if col != 1 {
+		t.Errorf("after l: col = %d, want 1", col)
 	}
 
-	// Move right again
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
 	v = m.(BoardViewer)
-	if v.cursor.col != 2 {
-		t.Errorf("after ll: col = %d, want 2", v.cursor.col)
+	col, _, _ = v.grid.CursorPos()
+	if col != 2 {
+		t.Errorf("after ll: col = %d, want 2", col)
 	}
 
 	// Clamped at right bound
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'l'}})
 	v = m.(BoardViewer)
-	if v.cursor.col != 2 {
-		t.Errorf("at right bound: col = %d, want 2", v.cursor.col)
+	col, _, _ = v.grid.CursorPos()
+	if col != 2 {
+		t.Errorf("at right bound: col = %d, want 2", col)
 	}
 
 	// Move left
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	v = m.(BoardViewer)
-	if v.cursor.col != 1 {
-		t.Errorf("after h: col = %d, want 1", v.cursor.col)
+	col, _, _ = v.grid.CursorPos()
+	if col != 1 {
+		t.Errorf("after h: col = %d, want 1", col)
 	}
 
 	// Clamp at left bound
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	m, _ = m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}})
 	v = m.(BoardViewer)
-	if v.cursor.col != 0 {
-		t.Errorf("at left bound: col = %d, want 0", v.cursor.col)
+	col, _, _ = v.grid.CursorPos()
+	if col != 0 {
+		t.Errorf("at left bound: col = %d, want 0", col)
 	}
 }
 
@@ -206,36 +211,40 @@ func TestBoardViewerNavigateRows(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
 	v := newLoadedBoard(api)
 
-	// Open column has 2 issues
-	if v.cursor.row != 0 {
-		t.Fatalf("initial row = %d, want 0", v.cursor.row)
+	_, _, row := v.grid.CursorPos()
+	if row != 0 {
+		t.Fatalf("initial row = %d, want 0", row)
 	}
 
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	v = m.(BoardViewer)
-	if v.cursor.row != 1 {
-		t.Errorf("after j: row = %d, want 1", v.cursor.row)
+	_, _, row = v.grid.CursorPos()
+	if row != 1 {
+		t.Errorf("after j: row = %d, want 1", row)
 	}
 
 	// Clamped at bottom
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	v = m.(BoardViewer)
-	if v.cursor.row != 1 {
-		t.Errorf("at bottom: row = %d, want 1", v.cursor.row)
+	_, _, row = v.grid.CursorPos()
+	if row != 1 {
+		t.Errorf("at bottom: row = %d, want 1", row)
 	}
 
 	// Move up
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
 	v = m.(BoardViewer)
-	if v.cursor.row != 0 {
-		t.Errorf("after k: row = %d, want 0", v.cursor.row)
+	_, _, row = v.grid.CursorPos()
+	if row != 0 {
+		t.Errorf("after k: row = %d, want 0", row)
 	}
 
 	// Clamped at top
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'k'}})
 	v = m.(BoardViewer)
-	if v.cursor.row != 0 {
-		t.Errorf("at top: row = %d, want 0", v.cursor.row)
+	_, _, row = v.grid.CursorPos()
+	if row != 0 {
+		t.Errorf("at top: row = %d, want 0", row)
 	}
 }
 
@@ -258,11 +267,9 @@ func TestBoardViewerEscFromIssueViewer(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
 	v := newLoadedBoard(api)
 
-	// Enter issue viewer
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	v = m.(BoardViewer)
 
-	// Esc back
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	v = m.(BoardViewer)
 
@@ -275,21 +282,22 @@ func TestBoardViewerMinimizeColumn(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
 	v := newLoadedBoard(api)
 
-	// Minimize column 0 (cursor starts there)
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
 	v = m.(BoardViewer)
-	if !v.columns[0].minimized {
+	columns := v.grid.Columns()
+	if !columns[0].Minimized {
 		t.Error("expected column 0 to be minimized")
 	}
-	// Cursor stays on col 0 (now minimized — can navigate over it)
-	if v.cursor.col != 0 {
-		t.Errorf("cursor.col = %d, want 0", v.cursor.col)
+	col, _, _ := v.grid.CursorPos()
+	if col != 0 {
+		t.Errorf("cursor.col = %d, want 0", col)
 	}
 
-	// Toggle back — m on minimized col restores it
+	// Toggle back
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
 	v = m.(BoardViewer)
-	if v.columns[0].minimized {
+	columns = v.grid.Columns()
+	if columns[0].Minimized {
 		t.Error("expected column 0 to not be minimized after toggle")
 	}
 }
@@ -333,11 +341,10 @@ func TestBoardViewerCursorPreservation(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
 	v := newLoadedBoard(api)
 
-	// Move to second issue in Open column
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'j'}})
 	v = m.(BoardViewer)
 
-	focused := v.focusedIssue()
+	focused := v.grid.FocusedIssue()
 	if focused == nil || focused.IDReadable != "TEST-4" {
 		t.Fatalf("expected focused issue TEST-4, got %v", focused)
 	}
@@ -346,7 +353,7 @@ func TestBoardViewerCursorPreservation(t *testing.T) {
 	m, _ = v.Update(boardRefreshedMsg{issues: api.issues})
 	v = m.(BoardViewer)
 
-	restored := v.focusedIssue()
+	restored := v.grid.FocusedIssue()
 	if restored == nil || restored.IDReadable != "TEST-4" {
 		t.Errorf("cursor not restored: got %v, want TEST-4", restored)
 	}
@@ -362,15 +369,14 @@ func TestBoardViewerNoColumnSettings(t *testing.T) {
 	api := &mockAPI{board: board, issues: issues}
 	v := newLoadedBoard(api)
 
-	// Should derive columns from issue states
-	if len(v.columns) == 0 {
+	columns := v.grid.Columns()
+	if len(columns) == 0 {
 		t.Error("expected fallback columns derived from issue states")
 	}
 
-	// Verify issues are bucketed
 	total := 0
-	for ci := range v.columns {
-		total += len(v.issues[ci][0])
+	for ci := range columns {
+		total += len(v.grid.CellIssues(ci, 0))
 	}
 	if total != len(issues) {
 		t.Errorf("total bucketed = %d, want %d", total, len(issues))
@@ -381,7 +387,6 @@ func TestBoardViewerEmptyBoard(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: nil}
 	v := newLoadedBoard(api)
 
-	// Should not panic
 	view := v.View()
 	if view == "" {
 		t.Error("expected non-empty view")

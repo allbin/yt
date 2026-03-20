@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/allbin/yt/internal/format"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +19,7 @@ func init() {
 }
 
 func runBoardList(cmd *cobra.Command, args []string) error {
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -31,8 +29,9 @@ func runBoardList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if jsonOutput {
-		return format.JSON(os.Stdout, boards)
+		return format.JSON(w, boards)
 	}
-	return format.BoardList(os.Stdout, boards)
+	return format.BoardList(w, boards)
 }

@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/allbin/yt/internal/format"
@@ -50,7 +49,7 @@ func init() {
 func runIssueUpdate(cmd *cobra.Command, args []string) error {
 	id := args[0]
 
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -74,10 +73,11 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if jsonOutput {
-		return format.JSON(os.Stdout, issue)
+		return format.JSON(w, issue)
 	}
-	return format.Issue(os.Stdout, issue)
+	return format.Issue(w, issue)
 }
 
 // buildCommand constructs a YouTrack command string from field values.

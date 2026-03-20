@@ -34,7 +34,7 @@ func init() {
 }
 
 func runBoardView(cmd *cobra.Command, args []string) error {
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}

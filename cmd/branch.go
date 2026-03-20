@@ -32,7 +32,7 @@ func init() {
 }
 
 func runBranch(cmd *cobra.Command, args []string) error {
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -54,6 +54,6 @@ func runBranch(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("git checkout -b %s: %w", name, err)
 	}
 
-	fmt.Printf("switched to new branch %s\n", name)
-	return nil
+	_, err = fmt.Fprintf(cmd.OutOrStdout(), "switched to new branch %s\n", name)
+	return err
 }

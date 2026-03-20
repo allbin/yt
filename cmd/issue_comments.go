@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os"
-
 	"github.com/allbin/yt/internal/format"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +24,7 @@ func init() {
 }
 
 func runIssueComments(cmd *cobra.Command, args []string) error {
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -36,8 +34,9 @@ func runIssueComments(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if jsonOutput {
-		return format.JSON(os.Stdout, comments)
+		return format.JSON(w, comments)
 	}
-	return format.CommentList(os.Stdout, comments)
+	return format.CommentList(w, comments)
 }

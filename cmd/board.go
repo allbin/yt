@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/allbin/yt/internal/format"
@@ -61,7 +60,7 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
 
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -92,10 +91,11 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if jsonOutput {
-		return format.JSON(os.Stdout, issues)
+		return format.JSON(w, issues)
 	}
-	return format.SprintIssues(os.Stdout, board.Name, sprintName, issues)
+	return format.SprintIssues(w, board.Name, sprintName, issues)
 }
 
 func resolveSprintName(board *youtrack.Agile) (string, error) {

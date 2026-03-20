@@ -149,14 +149,14 @@ func TestIssueViewerStatePicker(t *testing.T) {
 
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
 	v = m.(IssueViewer)
-	if v.mode != modeStatePicker {
-		t.Error("expected modeStatePicker after 's'")
+	if !v.modals.Active() {
+		t.Error("expected modal active after 's'")
 	}
 
 	m, _ = v.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	v = m.(IssueViewer)
-	if v.mode != modeNormal {
-		t.Error("expected modeNormal after cancel")
+	if v.modals.Active() {
+		t.Error("expected modal dismissed after cancel")
 	}
 }
 
@@ -164,8 +164,8 @@ func TestIssueViewerStatePickerNoStates(t *testing.T) {
 	v := newLoadedViewer(&mockAPI{issue: testViewIssue})
 
 	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
-	if m.(IssueViewer).mode != modeNormal {
-		t.Error("expected modeNormal when no states available")
+	if m.(IssueViewer).modals.Active() {
+		t.Error("expected no modal when no states available")
 	}
 }
 
@@ -234,21 +234,3 @@ func TestIssueViewerWindowResize(t *testing.T) {
 	}
 }
 
-func TestCommentAuthor(t *testing.T) {
-	tests := []struct {
-		name    string
-		comment youtrack.Comment
-		want    string
-	}{
-		{"full name", youtrack.Comment{Author: &youtrack.User{FullName: "Alice", Login: "alice"}}, "Alice"},
-		{"login only", youtrack.Comment{Author: &youtrack.User{Login: "bob"}}, "bob"},
-		{"nil author", youtrack.Comment{}, "Unknown"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := commentAuthor(tt.comment); got != tt.want {
-				t.Errorf("commentAuthor() = %q, want %q", got, tt.want)
-			}
-		})
-	}
-}

@@ -35,7 +35,7 @@ func runIssueView(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
 
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}

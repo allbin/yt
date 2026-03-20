@@ -62,7 +62,7 @@ func TestCommentListNilAuthor(t *testing.T) {
 	if err := CommentList(&buf, comments); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(buf.String(), "unknown") {
-		t.Error("expected 'unknown' for nil author")
+	if !strings.Contains(buf.String(), "Unknown") {
+		t.Error("expected 'Unknown' for nil author")
 	}
 }

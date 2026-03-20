@@ -14,7 +14,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-var jsonOutput bool
+var (
+	jsonOutput bool
+	apiFactory func() (youtrack.API, error)
+)
 
 var rootCmd = &cobra.Command{
 	Use:   "yt",
@@ -54,6 +57,7 @@ func formatError(err error) string {
 }
 
 func init() {
+	apiFactory = newClient
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "output raw JSON")
 }

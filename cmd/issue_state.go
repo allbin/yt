@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -41,7 +40,7 @@ func runIssueState(cmd *cobra.Command, args []string) error {
 		return cmd.Help()
 	}
 
-	client, err := newClient()
+	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
@@ -77,16 +76,17 @@ func runIssueState(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	w := cmd.OutOrStdout()
 	if jsonOutput {
 		issue, err = client.GetIssue(id)
 		if err != nil {
 			return err
 		}
-		return format.JSON(os.Stdout, issue)
+		return format.JSON(w, issue)
 	}
 
 	from := lipgloss.NewStyle().Foreground(format.StateColor(currentState)).Render(currentState)
 	to := lipgloss.NewStyle().Foreground(format.StateColor(result.State)).Render(result.State)
-	_, err = fmt.Fprintf(os.Stdout, "%s %s %s %s\n", issue.IDReadable, from, format.StyleDim.Render("→"), to)
+	_, err = fmt.Fprintf(w, "%s %s %s %s\n", issue.IDReadable, from, format.StyleDim.Render("→"), to)
 	return err
 }
