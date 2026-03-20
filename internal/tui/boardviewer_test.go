@@ -383,6 +383,79 @@ func TestBoardViewerNoColumnSettings(t *testing.T) {
 	}
 }
 
+func TestBoardViewerMinimizedColumnTooltip(t *testing.T) {
+	api := &mockAPI{board: testBoard, issues: testBoardIssues()}
+	v := newLoadedBoard(api)
+
+	// Minimize column 0 ("Open")
+	m, _ := v.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'m'}})
+	v = m.(BoardViewer)
+
+	if !v.grid.Columns()[0].Minimized {
+		t.Fatal("expected column 0 minimized")
+	}
+
+	view := v.View()
+	// Tooltip should show full column name in view
+	if !contains(view, "Open (2)") {
+		t.Error("expected tooltip with full column name in view")
+	}
+}
+
+func TestOverlayOnLine(t *testing.T) {
+	tests := []struct {
+		name   string
+		base   string
+		insert string
+		x      int
+		max    int
+		want   string
+	}{
+		{
+			name:   "simple overlay",
+			base:   "hello world!!!!",
+			insert: "XX",
+			x:      6,
+			max:    0,
+			want:   "hello XXrld!!!!",
+		},
+		{
+			name:   "overlay at start",
+			base:   "hello",
+			insert: "AB",
+			x:      0,
+			max:    0,
+			want:   "ABllo",
+		},
+		{
+			name:   "overlay past end",
+			base:   "hi",
+			insert: "XX",
+			x:      5,
+			max:    0,
+			want:   "hi   XX",
+		},
+		{
+			name:   "truncate to max",
+			base:   "hello world",
+			insert: "XXXXX",
+			x:      8,
+			max:    10,
+			want:   "hello woXX",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := overlayOnLine(tt.base, tt.insert, tt.x, tt.max)
+			if got != tt.want {
+				t.Errorf("overlayOnLine(%q, %q, %d, %d) = %q, want %q",
+					tt.base, tt.insert, tt.x, tt.max, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestBoardViewerEmptyBoard(t *testing.T) {
 	api := &mockAPI{board: testBoard, issues: nil}
 	v := newLoadedBoard(api)

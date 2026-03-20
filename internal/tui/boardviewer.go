@@ -322,8 +322,11 @@ func (m BoardViewer) View() string {
 	start := min(m.scrollOffset, len(m.rendered))
 	end := min(start+vpHeight, len(m.rendered))
 
-	for i := start; i < end; i++ {
-		b.WriteString(m.rendered[i])
+	vpLines := m.rendered[start:end]
+	vpLines = m.applyColumnTooltip(vpLines)
+
+	for _, line := range vpLines {
+		b.WriteString(line)
 		b.WriteString("\n")
 	}
 	for range vpHeight - (end - start) {
@@ -518,6 +521,63 @@ func (m BoardViewer) renderBoardFooter() string {
 	}
 	gap := max(m.width-lipgloss.Width(left)-lipgloss.Width(pos), 2)
 	return left + strings.Repeat(" ", gap) + format.StyleDim.Render(pos)
+}
+
+// --- Tooltip overlay ---
+
+func (m *BoardViewer) applyColumnTooltip(vpLines []string) []string {
+	if m.grid == nil {
+		return vpLines
+	}
+	curCol, _, _ := m.grid.CursorPos()
+	columns := m.grid.Columns()
+	if curCol >= len(columns) || !columns[curCol].Minimized {
+		return vpLines
+	}
+
+	widths := m.grid.ColumnWidths()
+	renderCols := m.grid.VisibleColumns()
+	x := 0
+	found := false
+	for _, ci := range renderCols {
+		if ci == curCol {
+			found = true
+			break
+		}
+		x += widths[ci]
+	}
+	if !found {
+		return vpLines
+	}
+
+	tooltip := m.renderColumnTooltip(columns[curCol])
+	tooltipLines := strings.Split(tooltip, "\n")
+
+	result := make([]string, len(vpLines))
+	copy(result, vpLines)
+	for i, tl := range tooltipLines {
+		if i >= len(result) {
+			break
+		}
+		result[i] = overlayOnLine(result[i], tl, x, m.width)
+	}
+	return result
+}
+
+func overlayOnLine(base, insert string, x, maxWidth int) string {
+	insertWidth := lipgloss.Width(insert)
+	prefix := ansi.Truncate(base, x, "")
+	suffix := ansi.TruncateLeft(base, x+insertWidth, "")
+
+	if pw := lipgloss.Width(prefix); pw < x {
+		prefix += strings.Repeat(" ", x-pw)
+	}
+
+	result := prefix + insert + suffix
+	if maxWidth > 0 && lipgloss.Width(result) > maxWidth {
+		result = ansi.Truncate(result, maxWidth, "")
+	}
+	return result
 }
 
 // --- Scrolling ---

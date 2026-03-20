@@ -140,6 +140,18 @@ func renderSwimlaneDivider(sl board.Swimlane, count, width int, colFocused, slFo
 	return line
 }
 
+func (m *BoardViewer) renderColumnTooltip(col board.Column) string {
+	label := fmt.Sprintf("%s (%d)", col.Presentation, col.IssueCount)
+	if col.IsResolved {
+		label = "\uf00c " + label
+	}
+	style := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(columnColor(col)).
+		Padding(0, 1)
+	return style.Render(label)
+}
+
 func columnColor(col board.Column) lipgloss.TerminalColor {
 	if len(col.StateNames) > 0 {
 		return format.StateColor(col.StateNames[0])
