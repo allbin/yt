@@ -29,7 +29,7 @@ func init() {
 	attachmentDownloadCmd.Flags().StringVarP(&attachmentOutput, "output", "o", "", "output file path (default: filename in current directory)")
 }
 
-func runAttachmentDownload(cmd *cobra.Command, args []string) error {
+func runAttachmentDownload(cmd *cobra.Command, args []string) (err error) {
 	issueID, filename := args[0], args[1]
 
 	client, err := apiFactory()
@@ -70,8 +70,10 @@ func runAttachmentDownload(cmd *cobra.Command, args []string) error {
 		}
 	}()
 
-	if err := client.DownloadAttachment(dlURL, f); err != nil {
-		return fmt.Errorf("download %s: %w", filename, err)
+	if dlErr := client.DownloadAttachment(dlURL, f); dlErr != nil {
+		_ = f.Close()
+		_ = os.Remove(outPath)
+		return fmt.Errorf("download %s: %w", filename, dlErr)
 	}
 
 	_, err = fmt.Fprintf(cmd.OutOrStdout(), "Downloaded %s (%s)\n", filename, format.FormatSize(size))
