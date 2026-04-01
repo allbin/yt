@@ -1,5 +1,7 @@
 package youtrack
 
+import "io"
+
 // API defines the YouTrack API surface. Used by CLI commands and future TUI.
 type API interface {
 	GetIssue(id string) (*Issue, error)
@@ -16,4 +18,6 @@ type API interface {
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
+	ListAttachments(issueID string) ([]Attachment, error)
+	DownloadAttachment(url string, w io.Writer) error
 }

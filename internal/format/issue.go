@@ -29,6 +29,24 @@ func (ew *errWriter) println(a ...any) {
 	}
 }
 
+func FormatSize(b int64) string {
+	switch {
+	case b < 1024:
+		return fmt.Sprintf("%dB", b)
+	case b < 1024*1024:
+		return fmt.Sprintf("%dKB", b/1024)
+	case b < 1024*1024*1024:
+		mb := float64(b) / (1024 * 1024)
+		if mb >= 10 {
+			return fmt.Sprintf("%.0fMB", mb)
+		}
+		return fmt.Sprintf("%.1fMB", mb)
+	default:
+		gb := float64(b) / (1024 * 1024 * 1024)
+		return fmt.Sprintf("%.1fGB", gb)
+	}
+}
+
 func JSON(w io.Writer, v any) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
@@ -69,6 +87,15 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 		ew.println(StyleRule.Render("────────────────────────────────────"))
 		rendered := strings.Trim(RenderMarkdown(v.Description, 80), "\n")
 		ew.println(rendered)
+	}
+
+	if len(issue.Attachments) > 0 {
+		ew.println()
+		parts := make([]string, len(issue.Attachments))
+		for i, a := range issue.Attachments {
+			parts[i] = fmt.Sprintf("%s (%s)", a.Name, FormatSize(a.Size))
+		}
+		ew.printf("  %s %s\n", StyleLabel.Render("Attachments"), strings.Join(parts, ", "))
 	}
 
 	return ew.err

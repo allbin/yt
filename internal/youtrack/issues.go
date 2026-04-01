@@ -9,7 +9,8 @@ import (
 
 const issueFields = "idReadable,summary,description,resolved,created,updated," +
 	"tags(name)," +
-	"customFields(name,value(name,text,presentation,login,fullName))"
+	"customFields(name,value(name,text,presentation,login,fullName))," +
+	"attachments(id,name,url,size,mimeType,created)"
 
 func (c *Client) GetIssue(id string) (*Issue, error) {
 	params := url.Values{"fields": {issueFields}}

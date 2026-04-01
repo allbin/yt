@@ -1,6 +1,7 @@
 package boarddata
 
 import (
+	"io"
 	"testing"
 
 	"github.com/allbin/yt/internal/youtrack"
@@ -32,6 +33,8 @@ func (m *mockAPI) SetIssueState(_ string, state string) error { m.stateSet = sta
 func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) {
 	return m.sprintBoard, m.sbErr
 }
+func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
+func (m *mockAPI) DownloadAttachment(string, io.Writer) error           { return nil }
 
 func TestLoadQueryPath(t *testing.T) {
 	api := &mockAPI{

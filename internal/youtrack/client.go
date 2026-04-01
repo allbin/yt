@@ -91,6 +91,34 @@ func (c *Client) post(path string, body any) error {
 	return nil
 }
 
+func (c *Client) download(path string, w io.Writer) (err error) {
+	u := c.baseURL + path
+
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return &APIError{StatusCode: resp.StatusCode, Body: string(body)}
+	}
+
+	_, err = io.Copy(w, resp.Body)
+	return err
+}
+
 func (c *Client) postJSON(path string, body any) (data []byte, err error) {
 	payload, err := json.Marshal(body)
 	if err != nil {

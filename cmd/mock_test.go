@@ -1,6 +1,10 @@
 package cmd
 
-import "github.com/allbin/yt/internal/youtrack"
+import (
+	"io"
+
+	"github.com/allbin/yt/internal/youtrack"
+)
 
 type mockAPI struct {
 	issue    *youtrack.Issue
@@ -40,3 +44,5 @@ func (m *mockAPI) SetIssueState(_ string, state string) error {
 func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) {
 	return nil, nil
 }
+func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
+func (m *mockAPI) DownloadAttachment(string, io.Writer) error           { return nil }
