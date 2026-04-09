@@ -1,6 +1,6 @@
 ---
 name: yt
-description: "Interact with YouTrack: fetch issue details, list/filter issues, view boards, create branches. Use when referencing issue keys (e.g. PROJ-123), searching issues, or checking board status."
+description: "Interact with YouTrack: fetch issue details, list/filter issues, view boards, create branches, download attachments. Use when referencing issue keys (e.g. PROJ-123), searching issues, or checking board status."
 argument-hint: <issue-id>
 allowed-tools: Bash(yt *)
 ---
@@ -61,6 +61,17 @@ yt branch <ID>           # e.g. proj-123-slugified-summary
 yt branch <ID> --no-slug # e.g. proj-123
 ```
 
+## Attachments
+
+Issue details (`yt issue <ID> --json`) include an `attachments` array with name and size.
+
+Download an attachment:
+
+```bash
+yt attachment download <ID> <filename>
+yt attachment download <ID> <filename> --output /tmp/file.csv
+```
+
 ## Projects
 
 ```bash
@@ -74,6 +85,7 @@ For a single issue:
 2. State, Priority, Assignee, Type as metadata
 3. Subsystem and Tags if present
 4. Description if available
+5. Attachments if present (offer to download when relevant)
 
 For lists: compact table with ID, state, priority, assignee, summary.
 

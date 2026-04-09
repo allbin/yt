@@ -38,4 +38,5 @@ just install  # go install
 1. `just check` -- must pass
 2. `just build` -- verify binary works
 3. `just docs` -- regenerate CLI reference
-4. `./yt install skill` -- reinstall Claude Code skill
+4. Update `cmd/skill.md` if new commands/features were added -- this is the Claude Code skill definition
+5. `./yt install skill` -- reinstall Claude Code skill
