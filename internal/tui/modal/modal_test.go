@@ -75,6 +75,39 @@ func TestStackUpdateAndPop(t *testing.T) {
 	}
 }
 
+// quittingModal returns tea.Quit when done, like StatePicker does.
+type quittingModal struct {
+	done  bool
+	value string
+}
+
+func (m *quittingModal) Init() tea.Cmd  { return nil }
+func (m *quittingModal) View() string   { return "modal:" + m.value }
+func (m *quittingModal) Done() bool     { return m.done }
+func (m *quittingModal) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if km, ok := msg.(tea.KeyMsg); ok && km.String() == "enter" {
+		m.done = true
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func TestStackDiscardsQuitOnPop(t *testing.T) {
+	var s Stack
+	s.Push(&quittingModal{value: "picker"})
+
+	popped, cmd := s.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if popped == nil {
+		t.Fatal("expected modal to pop")
+	}
+	if cmd != nil {
+		t.Error("stack should discard cmd (tea.Quit) when popping a done modal")
+	}
+	if s.Active() {
+		t.Error("stack should be empty after pop")
+	}
+}
+
 func TestStackNested(t *testing.T) {
 	var s Stack
 	s.Push(&testModal{value: "first"})

@@ -42,7 +42,10 @@ func (s *Stack) Update(msg tea.Msg) (Modal, tea.Cmd) {
 	s.layers[len(s.layers)-1] = top
 	if top.Done() {
 		s.layers = s.layers[:len(s.layers)-1]
-		return top, cmd
+		// Discard cmd (typically tea.Quit) — modals signal completion
+		// via Done(), and the parent handles result extraction. Passing
+		// tea.Quit through would kill the entire program.
+		return top, nil
 	}
 	return nil, cmd
 }
