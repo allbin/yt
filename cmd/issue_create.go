@@ -9,6 +9,7 @@ var (
 	createProject     string
 	createSummary     string
 	createDescription string
+	createTags        []string
 )
 
 var createCmd = &cobra.Command{
@@ -24,6 +25,9 @@ The created issue is displayed after creation.`,
   # create with description
   yt issue create -p PROJ -s "Add dark mode" -d "Support system-level dark mode preference"
 
+  # create with tags
+  yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
+
   # output as JSON
   yt issue create -p PROJ -s "New feature" --json`,
 	RunE: runIssueCreate,
@@ -34,6 +38,7 @@ func init() {
 	createCmd.Flags().StringVarP(&createProject, "project", "p", "", "project short name (required)")
 	createCmd.Flags().StringVarP(&createSummary, "summary", "s", "", "issue summary (required)")
 	createCmd.Flags().StringVarP(&createDescription, "description", "d", "", "issue description")
+	createCmd.Flags().StringSliceVarP(&createTags, "tag", "t", nil, "add tag (repeatable)")
 	_ = createCmd.MarkFlagRequired("project")
 	_ = createCmd.MarkFlagRequired("summary")
 }
@@ -44,7 +49,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	issue, err := client.CreateIssue(createProject, createSummary, createDescription)
+	issue, err := client.CreateIssue(createProject, createSummary, createDescription, createTags)
 	if err != nil {
 		return err
 	}

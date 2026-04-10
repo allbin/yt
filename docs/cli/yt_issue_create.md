@@ -22,6 +22,9 @@ yt issue create [flags]
   # create with description
   yt issue create -p PROJ -s "Add dark mode" -d "Support system-level dark mode preference"
 
+  # create with tags
+  yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
+
   # output as JSON
   yt issue create -p PROJ -s "New feature" --json
 ```
@@ -33,6 +36,7 @@ yt issue create [flags]
   -h, --help                 help for create
   -p, --project string       project short name (required)
   -s, --summary string       issue summary (required)
+  -t, --tag strings          add tag (repeatable)
 ```
 
 ### Options inherited from parent commands

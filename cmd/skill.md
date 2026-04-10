@@ -61,6 +61,36 @@ yt branch <ID>           # e.g. proj-123-slugified-summary
 yt branch <ID> --no-slug # e.g. proj-123
 ```
 
+## Create an issue
+
+```bash
+yt issue create --json -p PROJ -s "Summary" [-d "Description"] [-t tag1 -t tag2]
+```
+
+Flags:
+- `-p, --project` — project short name (required)
+- `-s, --summary` — issue summary (required)
+- `-d, --description` — issue description
+- `-t, --tag` — add tag (repeatable)
+
+Tags are created automatically by YouTrack if they don't exist.
+
+## Update an issue
+
+```bash
+yt issue update PROJ-123 [flags]
+```
+
+Flags:
+- `-s, --state` — set issue state
+- `-a, --assignee` — set assignee (supports "me", login, or full name)
+- `-p, --priority` — set priority
+- `-t, --type` — set issue type
+- `--tag` — add tag (repeatable)
+- `--remove-tag` — remove tag (repeatable)
+
+Multiple flags can be combined. Tags are added/removed without affecting existing tags.
+
 ## Attachments
 
 Issue details (`yt issue <ID> --json`) include an `attachments` array with name and size.

@@ -27,7 +27,7 @@ func (m *mockAPI) ResolveUser(string) (string, error)                    { retur
 func (m *mockAPI) UpdateIssue(string, string) error                      { return nil }
 func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)       { return nil, nil }
 func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error)  { return nil, nil }
-func (m *mockAPI) CreateIssue(string, string, string) (*youtrack.Issue, error) { return nil, nil }
+func (m *mockAPI) CreateIssue(string, string, string, []string) (*youtrack.Issue, error) { return nil, nil }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) { return nil, nil }
 func (m *mockAPI) SetIssueState(_ string, state string) error { m.stateSet = state; return nil }
 func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) {

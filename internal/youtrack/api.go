@@ -14,7 +14,7 @@ type API interface {
 	UpdateIssue(id string, command string) error
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
-	CreateIssue(project, summary, description string) (*Issue, error)
+	CreateIssue(project, summary, description string, tags []string) (*Issue, error)
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)

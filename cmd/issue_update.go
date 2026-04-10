@@ -9,10 +9,12 @@ import (
 )
 
 var (
-	updateState    string
-	updateAssignee string
-	updatePriority string
-	updateType     string
+	updateState      string
+	updateAssignee   string
+	updatePriority   string
+	updateType       string
+	updateTags       []string
+	updateRemoveTags []string
 )
 
 var updateCmd = &cobra.Command{
@@ -32,6 +34,12 @@ After a successful update the issue is fetched and displayed.`,
   # set type
   yt issue update PROJ-123 -t Bug
 
+  # add tags
+  yt issue update PROJ-123 --tag tech-debt --tag scheduler
+
+  # remove a tag
+  yt issue update PROJ-123 --remove-tag obsolete
+
   # combine all fields
   yt issue update PROJ-123 -s Open -a john -p Normal -t Task`,
 	Args: cobra.ExactArgs(1),
@@ -44,6 +52,8 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateAssignee, "assignee", "a", "", "set assignee (supports 'me')")
 	updateCmd.Flags().StringVarP(&updatePriority, "priority", "p", "", "set priority")
 	updateCmd.Flags().StringVarP(&updateType, "type", "t", "", "set issue type")
+	updateCmd.Flags().StringSliceVar(&updateTags, "tag", nil, "add tag (repeatable)")
+	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
 }
 
 func runIssueUpdate(cmd *cobra.Command, args []string) error {
@@ -59,9 +69,9 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	command := buildCommand(updateState, assignee, updatePriority, updateType)
+	command := buildCommand(updateState, assignee, updatePriority, updateType, updateTags, updateRemoveTags)
 	if command == "" {
-		return fmt.Errorf("no fields to update; use --state, --assignee, --priority, or --type")
+		return fmt.Errorf("no fields to update; use --state, --assignee, --priority, --type, --tag, or --remove-tag")
 	}
 
 	if err := client.UpdateIssue(id, command); err != nil {
@@ -82,7 +92,7 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 
 // buildCommand constructs a YouTrack command string from field values.
 // Multi-word values are wrapped in braces.
-func buildCommand(state, assignee, priority, typ string) string {
+func buildCommand(state, assignee, priority, typ string, tags, removeTags []string) string {
 	var parts []string
 	if state != "" {
 		parts = append(parts, "State "+braceWrap(state))
@@ -95,6 +105,12 @@ func buildCommand(state, assignee, priority, typ string) string {
 	}
 	if typ != "" {
 		parts = append(parts, "Type "+braceWrap(typ))
+	}
+	for _, t := range tags {
+		parts = append(parts, "tag "+braceWrap(t))
+	}
+	for _, t := range removeTags {
+		parts = append(parts, "untag "+braceWrap(t))
 	}
 	return strings.Join(parts, " ")
 }

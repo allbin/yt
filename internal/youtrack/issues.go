@@ -44,16 +44,23 @@ func (c *Client) UpdateIssue(id string, command string) error {
 	return nil
 }
 
-func (c *Client) CreateIssue(project, summary, description string) (*Issue, error) {
+func (c *Client) CreateIssue(project, summary, description string, tags []string) (*Issue, error) {
+	type tagRef struct {
+		Name string `json:"name"`
+	}
 	body := struct {
 		Project     struct{ ShortName string `json:"shortName"` } `json:"project"`
 		Summary     string                                        `json:"summary"`
 		Description string                                        `json:"description,omitempty"`
+		Tags        []tagRef                                      `json:"tags,omitempty"`
 	}{
 		Summary:     summary,
 		Description: description,
 	}
 	body.Project.ShortName = project
+	for _, t := range tags {
+		body.Tags = append(body.Tags, tagRef{Name: t})
+	}
 
 	path := "/api/issues?fields=" + url.QueryEscape(issueFields)
 	data, err := c.postJSON(path, body)

@@ -18,12 +18,18 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		rootCmd.SetOut(buf)
 		rootCmd.SetErr(buf)
 		rootCmd.SetArgs(args)
-		// Reset persistent flags to defaults before each invocation.
+		// Reset flags to defaults before each invocation.
 		jsonOutput = false
+		createTags = nil
+		updateTags = nil
+		updateRemoveTags = nil
 		t.Cleanup(func() {
 			rootCmd.SetOut(nil)
 			rootCmd.SetErr(nil)
 			jsonOutput = false
+			createTags = nil
+			updateTags = nil
+			updateRemoveTags = nil
 		})
 		err := rootCmd.Execute()
 		return buf.String(), err

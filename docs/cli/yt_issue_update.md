@@ -26,6 +26,12 @@ yt issue update <id> [flags]
   # set type
   yt issue update PROJ-123 -t Bug
 
+  # add tags
+  yt issue update PROJ-123 --tag tech-debt --tag scheduler
+
+  # remove a tag
+  yt issue update PROJ-123 --remove-tag obsolete
+
   # combine all fields
   yt issue update PROJ-123 -s Open -a john -p Normal -t Task
 ```
@@ -33,11 +39,13 @@ yt issue update <id> [flags]
 ### Options
 
 ```
-  -a, --assignee string   set assignee (supports 'me')
-  -h, --help              help for update
-  -p, --priority string   set priority
-  -s, --state string      set issue state
-  -t, --type string       set issue type
+  -a, --assignee string      set assignee (supports 'me')
+  -h, --help                 help for update
+  -p, --priority string      set priority
+      --remove-tag strings   remove tag (repeatable)
+  -s, --state string         set issue state
+      --tag strings          add tag (repeatable)
+  -t, --type string          set issue type
 ```
 
 ### Options inherited from parent commands
