@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -158,5 +159,190 @@ func TestRunIssueUpdateWithRemoveTag(t *testing.T) {
 	}
 	if !strings.Contains(out, "PROJ-123") {
 		t.Errorf("output missing issue ID: %s", out)
+	}
+}
+
+func TestRunIssueUpdateWithSubsystem(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--subsystem", "API")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Subsystem API" {
+		t.Errorf("command = %q, want %q", mock.command, "Subsystem API")
+	}
+}
+
+func TestRunIssueUpdateWithField(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--field", "Severity=Critical")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Severity Critical" {
+		t.Errorf("command = %q, want %q", mock.command, "Severity Critical")
+	}
+}
+
+func TestRunIssueUpdateWithFieldAndSubsystem(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--subsystem", "API", "--field", "Severity=Critical", "-s", "Open")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	want := "State Open Severity Critical Subsystem API"
+	if mock.command != want {
+		t.Errorf("command = %q, want %q", mock.command, want)
+	}
+}
+
+func TestRunIssueUpdateEmptySubsystem(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--subsystem", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Subsystem " {
+		t.Errorf("command = %q, want %q", mock.command, "Subsystem ")
+	}
+}
+
+func TestRunIssueUpdateEmptyField(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--field", "Subsystem=")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Subsystem " {
+		t.Errorf("command = %q, want %q", mock.command, "Subsystem ")
+	}
+}
+
+func TestRunIssueCreateEmptySubsystem(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "PROJ", "-s", "Test", "--subsystem", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Subsystem " {
+		t.Errorf("command = %q, want %q", mock.command, "Subsystem ")
+	}
+}
+
+func TestRunIssueUpdateNoFlags(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123")
+	if err == nil {
+		t.Fatal("expected error for no flags")
+	}
+	if !strings.Contains(err.Error(), "no fields to update") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunIssueUpdateInvalidField(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--field", "bad-format")
+	if err == nil {
+		t.Fatal("expected error for invalid field format")
+	}
+	if !strings.Contains(err.Error(), "invalid --field format") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunIssueCreateWithSubsystem(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	out, err := run("issue", "create", "-p", "PROJ", "-s", "Test", "--subsystem", "API")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Subsystem API" {
+		t.Errorf("command = %q, want %q", mock.command, "Subsystem API")
+	}
+	if !strings.Contains(out, "PROJ-") {
+		t.Errorf("output missing issue ID: %s", out)
+	}
+}
+
+func TestRunIssueCreateWithField(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "PROJ", "-s", "Test", "--field", "Severity=Critical")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "Severity Critical" {
+		t.Errorf("command = %q, want %q", mock.command, "Severity Critical")
+	}
+}
+
+func TestRunIssueCreateFieldFailure(t *testing.T) {
+	mock := &mockAPI{
+		issue:     &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Test"},
+		updateErr: fmt.Errorf("unknown field"),
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "PROJ", "-s", "Test", "--subsystem", "BadValue")
+	if err == nil {
+		t.Fatal("expected error when field-setting fails")
+	}
+	if !strings.Contains(err.Error(), "set fields on PROJ-999") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunIssueCreateNoFieldsSkipsUpdate(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "PROJ", "-s", "Test")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.command != "" {
+		t.Errorf("expected no update command, got %q", mock.command)
 	}
 }

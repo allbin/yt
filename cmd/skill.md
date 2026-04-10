@@ -64,7 +64,7 @@ yt branch <ID> --no-slug # e.g. proj-123
 ## Create an issue
 
 ```bash
-yt issue create --json -p PROJ -s "Summary" [-d "Description"] [-t tag1 -t tag2]
+yt issue create --json -p PROJ -s "Summary" [-d "Description"] [-t tag1 -t tag2] [--subsystem API] [--field "Name=Value"]
 ```
 
 Flags:
@@ -72,6 +72,8 @@ Flags:
 - `-s, --summary` — issue summary (required)
 - `-d, --description` — issue description
 - `-t, --tag` — add tag (repeatable)
+- `--subsystem` — set subsystem
+- `--field` — set custom field as "Name=Value" (repeatable)
 
 Tags are created automatically by YouTrack if they don't exist.
 
@@ -86,8 +88,10 @@ Flags:
 - `-a, --assignee` — set assignee (supports "me", login, or full name)
 - `-p, --priority` — set priority
 - `-t, --type` — set issue type
+- `--subsystem` — set subsystem
 - `--tag` — add tag (repeatable)
 - `--remove-tag` — remove tag (repeatable)
+- `--field` — set custom field as "Name=Value" (repeatable)
 
 Multiple flags can be combined. Tags are added/removed without affecting existing tags.
 
@@ -104,9 +108,24 @@ yt attachment download <ID> <filename> --output /tmp/file.csv
 
 ## Projects
 
+List all projects:
+
 ```bash
-yt project list --json
+yt projects --json
 ```
+
+## Project custom fields
+
+Before setting custom fields with `--field` or `--subsystem`, discover what
+fields are available and their allowed values:
+
+```bash
+yt project fields PROJ --json
+```
+
+Returns an array of fields with name, type, and allowed values. Use this to
+determine valid values for `--subsystem`, `--state`, `--priority`, `--type`,
+or any `--field "Name=Value"` flag.
 
 ## Presenting results
 

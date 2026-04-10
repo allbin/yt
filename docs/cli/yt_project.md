@@ -1,10 +1,10 @@
 ## yt project
 
-Manage YouTrack projects
+Inspect YouTrack project details
 
 ### Synopsis
 
-List and inspect YouTrack projects.
+Inspect custom fields and configuration for a YouTrack project.
 
 ### Options
 
@@ -21,5 +21,5 @@ List and inspect YouTrack projects.
 ### SEE ALSO
 
 * [yt](yt.md)	 - YouTrack CLI
-* [yt project list](yt_project_list.md)	 - List YouTrack projects
+* [yt project fields](yt_project_fields.md)	 - List custom fields for a project
 

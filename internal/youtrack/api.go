@@ -17,6 +17,10 @@ type API interface {
 	CreateIssue(project, summary, description string, tags []string) (*Issue, error)
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
+	GetFieldValues(issueID, fieldName string) ([]BundleValue, error)
+	GetProjectFieldValues(projectID, fieldName string) ([]BundleValue, error)
+	ListProjectFields(projectID string) ([]ProjectField, error)
+	ListFieldNames(issueID string) ([]string, error)
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
 	ListAttachments(issueID string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error

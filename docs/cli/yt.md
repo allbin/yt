@@ -23,5 +23,6 @@ Requires YOUTRACK_URL and YOUTRACK_TOKEN environment variables.
 * [yt branch](yt_branch.md)	 - Create git branch from issue
 * [yt install](yt_install.md)	 - Install shell completions and Claude Code skill
 * [yt issue](yt_issue.md)	 - Show or manage YouTrack issues
-* [yt project](yt_project.md)	 - Manage YouTrack projects
+* [yt project](yt_project.md)	 - Inspect YouTrack project details
+* [yt projects](yt_projects.md)	 - List YouTrack projects
 

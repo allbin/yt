@@ -4,8 +4,8 @@ import "github.com/spf13/cobra"
 
 var projectCmd = &cobra.Command{
 	Use:   "project",
-	Short: "Manage YouTrack projects",
-	Long:  "List and inspect YouTrack projects.",
+	Short: "Inspect YouTrack project details",
+	Long:  "Inspect custom fields and configuration for a YouTrack project.",
 }
 
 func init() {

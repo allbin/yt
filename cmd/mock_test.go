@@ -7,16 +7,21 @@ import (
 )
 
 type mockAPI struct {
-	issue    *youtrack.Issue
-	issues   []youtrack.Issue
-	comments []youtrack.Comment
-	states   []youtrack.StateBundleElement
-	board    *youtrack.Agile
-	boards   []youtrack.Agile
-	projects []youtrack.Project
-	issueErr error
-	boardErr error
-	stateSet string
+	issue     *youtrack.Issue
+	issues    []youtrack.Issue
+	comments  []youtrack.Comment
+	states    []youtrack.StateBundleElement
+	board     *youtrack.Agile
+	boards    []youtrack.Agile
+	projects  []youtrack.Project
+	issueErr  error
+	boardErr  error
+	stateSet      string
+	command       string
+	updateErr     error
+	fieldValues   []youtrack.BundleValue
+	fieldNames    []string
+	projectFields []youtrack.ProjectField
 }
 
 func (m *mockAPI) GetIssue(string) (*youtrack.Issue, error)         { return m.issue, m.issueErr }
@@ -26,7 +31,10 @@ func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)   { return m.b
 func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
 func (m *mockAPI) ListProjects() ([]youtrack.Project, error)        { return m.projects, nil }
 func (m *mockAPI) ResolveUser(q string) (string, error)             { return q, nil }
-func (m *mockAPI) UpdateIssue(string, string) error                 { return nil }
+func (m *mockAPI) UpdateIssue(_ string, cmd string) error {
+	m.command = cmd
+	return m.updateErr
+}
 func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)  { return m.comments, nil }
 func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error) {
 	return &youtrack.Comment{ID: "mock-comment-1", Text: "mock"}, nil
@@ -50,3 +58,13 @@ func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) 
 }
 func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
 func (m *mockAPI) DownloadAttachment(string, io.Writer) error           { return nil }
+func (m *mockAPI) GetFieldValues(string, string) ([]youtrack.BundleValue, error) {
+	return m.fieldValues, nil
+}
+func (m *mockAPI) GetProjectFieldValues(string, string) ([]youtrack.BundleValue, error) {
+	return m.fieldValues, nil
+}
+func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error) {
+	return m.projectFields, nil
+}
+func (m *mockAPI) ListFieldNames(string) ([]string, error) { return m.fieldNames, nil }

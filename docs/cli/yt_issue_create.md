@@ -9,6 +9,8 @@ short name and summary. Optionally accepts a description.
 
 The created issue is displayed after creation.
 
+Use --subsystem or --field to set custom fields on the new issue.
+
 ```
 yt issue create [flags]
 ```
@@ -22,6 +24,12 @@ yt issue create [flags]
   # create with description
   yt issue create -p PROJ -s "Add dark mode" -d "Support system-level dark mode preference"
 
+  # create with subsystem
+  yt issue create -p PROJ -s "Fix API auth" --subsystem API
+
+  # create with custom field
+  yt issue create -p PROJ -s "Critical outage" --field "Severity=Critical"
+
   # create with tags
   yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
 
@@ -33,8 +41,10 @@ yt issue create [flags]
 
 ```
   -d, --description string   issue description
+      --field strings        set custom field as "Name=Value" (repeatable)
   -h, --help                 help for create
   -p, --project string       project short name (required)
+      --subsystem string     set subsystem
   -s, --summary string       issue summary (required)
   -t, --tag strings          add tag (repeatable)
 ```

@@ -5,16 +5,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var projectListCmd = &cobra.Command{
-	Use:     "list",
+var projectsCmd = &cobra.Command{
+	Use:     "projects",
 	Short:   "List YouTrack projects",
 	Long:    "List all YouTrack projects with their short names.",
-	Example: `  yt project list`,
+	Example: `  yt projects`,
 	RunE:    runProjectList,
 }
 
 func init() {
-	projectCmd.AddCommand(projectListCmd)
+	rootCmd.AddCommand(projectsCmd)
 }
 
 func runProjectList(cmd *cobra.Command, args []string) error {

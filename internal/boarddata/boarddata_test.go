@@ -35,6 +35,14 @@ func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) 
 }
 func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
 func (m *mockAPI) DownloadAttachment(string, io.Writer) error           { return nil }
+func (m *mockAPI) GetFieldValues(string, string) ([]youtrack.BundleValue, error) {
+	return nil, nil
+}
+func (m *mockAPI) GetProjectFieldValues(string, string) ([]youtrack.BundleValue, error) {
+	return nil, nil
+}
+func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error) { return nil, nil }
+func (m *mockAPI) ListFieldNames(string) ([]string, error)                   { return nil, nil }
 
 func TestLoadQueryPath(t *testing.T) {
 	api := &mockAPI{

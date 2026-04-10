@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/allbin/yt/internal/format"
 	"github.com/spf13/cobra"
 )
@@ -9,7 +11,9 @@ var (
 	createProject     string
 	createSummary     string
 	createDescription string
+	createSubsystem   string
 	createTags        []string
+	createFields      []string
 )
 
 var createCmd = &cobra.Command{
@@ -18,12 +22,20 @@ var createCmd = &cobra.Command{
 	Long: `Create a new issue in the specified YouTrack project. Requires a project
 short name and summary. Optionally accepts a description.
 
-The created issue is displayed after creation.`,
+The created issue is displayed after creation.
+
+Use --subsystem or --field to set custom fields on the new issue.`,
 	Example: `  # create a minimal issue
   yt issue create -p PROJ -s "Fix login bug"
 
   # create with description
   yt issue create -p PROJ -s "Add dark mode" -d "Support system-level dark mode preference"
+
+  # create with subsystem
+  yt issue create -p PROJ -s "Fix API auth" --subsystem API
+
+  # create with custom field
+  yt issue create -p PROJ -s "Critical outage" --field "Severity=Critical"
 
   # create with tags
   yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
@@ -38,9 +50,14 @@ func init() {
 	createCmd.Flags().StringVarP(&createProject, "project", "p", "", "project short name (required)")
 	createCmd.Flags().StringVarP(&createSummary, "summary", "s", "", "issue summary (required)")
 	createCmd.Flags().StringVarP(&createDescription, "description", "d", "", "issue description")
+	createCmd.Flags().StringVar(&createSubsystem, "subsystem", "", "set subsystem")
 	createCmd.Flags().StringSliceVarP(&createTags, "tag", "t", nil, "add tag (repeatable)")
+	createCmd.Flags().StringSliceVar(&createFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	_ = createCmd.MarkFlagRequired("project")
 	_ = createCmd.MarkFlagRequired("summary")
+
+	_ = createCmd.RegisterFlagCompletionFunc("subsystem", completeProjectFieldValues("Subsystem"))
+	_ = createCmd.RegisterFlagCompletionFunc("field", completeFieldFlag(false))
 }
 
 func runIssueCreate(cmd *cobra.Command, args []string) error {
@@ -52,6 +69,25 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	issue, err := client.CreateIssue(createProject, createSummary, createDescription, createTags)
 	if err != nil {
 		return err
+	}
+
+	fields := createFields
+	if cmd.Flags().Changed("subsystem") {
+		fields = append(fields, "Subsystem="+createSubsystem)
+	}
+
+	command, err := buildCommand("", "", "", "", nil, nil, fields)
+	if err != nil {
+		return err
+	}
+	if command != "" {
+		if err := client.UpdateIssue(issue.IDReadable, command); err != nil {
+			return fmt.Errorf("set fields on %s: %w", issue.IDReadable, err)
+		}
+		issue, err = client.GetIssue(issue.IDReadable)
+		if err != nil {
+			return err
+		}
 	}
 
 	w := cmd.OutOrStdout()
