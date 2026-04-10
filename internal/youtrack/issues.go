@@ -44,6 +44,13 @@ func (c *Client) UpdateIssue(id string, command string) error {
 	return nil
 }
 
+func (c *Client) UpdateIssueFields(id string, fields map[string]string) error {
+	if err := c.post("/api/issues/"+url.PathEscape(id), fields); err != nil {
+		return fmt.Errorf("update fields %s: %w", id, err)
+	}
+	return nil
+}
+
 func (c *Client) CreateIssue(project, summary, description string, tags []string) (*Issue, error) {
 	type tagRef struct {
 		Name string `json:"name"`

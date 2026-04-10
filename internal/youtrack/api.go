@@ -12,6 +12,7 @@ type API interface {
 	ListProjects() ([]Project, error)
 	ResolveUser(query string) (string, error)
 	UpdateIssue(id string, command string) error
+	UpdateIssueFields(id string, fields map[string]string) error
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
 	CreateIssue(project, summary, description string, tags []string) (*Issue, error)

@@ -9,28 +9,37 @@ import (
 )
 
 var (
-	updateState      string
-	updateAssignee   string
-	updatePriority   string
-	updateType       string
-	updateSubsystem  string
-	updateTags       []string
-	updateRemoveTags []string
-	updateFields     []string
+	updateState       string
+	updateAssignee    string
+	updatePriority    string
+	updateType        string
+	updateSubsystem   string
+	updateSummary     string
+	updateDescription string
+	updateTags        []string
+	updateRemoveTags  []string
+	updateFields      []string
 )
 
 var updateCmd = &cobra.Command{
 	Use:   "update <id>",
 	Short: "Update a YouTrack issue",
-	Long: `Update fields on a YouTrack issue by executing a command string.
-Supports setting state, assignee, priority, type, and subsystem.
-Multiple flags can be combined in a single invocation.
+	Long: `Update fields on a YouTrack issue.
+
+Summary and description use the REST API; other fields use the command API.
+Both can be combined in a single invocation.
 
 Use --field to set arbitrary custom fields by name.
 
 After a successful update the issue is fetched and displayed.`,
 	Example: `  # set state
   yt issue update PROJ-123 -s "In Progress"
+
+  # update summary
+  yt issue update PROJ-123 -S "New title"
+
+  # update description
+  yt issue update PROJ-123 -d "Updated description"
 
   # set assignee and priority
   yt issue update PROJ-123 -a me -p Critical
@@ -50,8 +59,8 @@ After a successful update the issue is fetched and displayed.`,
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
 
-  # combine all fields
-  yt issue update PROJ-123 -s Open -a john -p Normal -t Task --subsystem API`,
+  # combine REST and command fields
+  yt issue update PROJ-123 -S "New title" -s "In Progress" -a me`,
 	Args: cobra.ExactArgs(1),
 	RunE: runIssueUpdate,
 }
@@ -63,6 +72,8 @@ func init() {
 	updateCmd.Flags().StringVarP(&updatePriority, "priority", "p", "", "set priority")
 	updateCmd.Flags().StringVarP(&updateType, "type", "t", "", "set issue type")
 	updateCmd.Flags().StringVar(&updateSubsystem, "subsystem", "", "set subsystem")
+	updateCmd.Flags().StringVarP(&updateSummary, "summary", "S", "", "set issue summary")
+	updateCmd.Flags().StringVarP(&updateDescription, "description", "d", "", "set issue description")
 	updateCmd.Flags().StringSliceVar(&updateTags, "tag", nil, "add tag (repeatable)")
 	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
 	updateCmd.Flags().StringSliceVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
@@ -82,6 +93,16 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// REST API: summary and description
+	restFields := make(map[string]string)
+	if cmd.Flags().Changed("summary") {
+		restFields["summary"] = updateSummary
+	}
+	if cmd.Flags().Changed("description") {
+		restFields["description"] = updateDescription
+	}
+
+	// Command API: state, assignee, priority, type, subsystem, tags, fields
 	assignee, err := resolveAssignee(client, updateAssignee)
 	if err != nil {
 		return err
@@ -96,12 +117,21 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if command == "" {
-		return fmt.Errorf("no fields to update; use --state, --assignee, --priority, --type, --subsystem, --tag, --field, or --remove-tag")
+
+	if len(restFields) == 0 && command == "" {
+		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --tag, --field, or --remove-tag")
 	}
 
-	if err := client.UpdateIssue(id, command); err != nil {
-		return err
+	if len(restFields) > 0 {
+		if err := client.UpdateIssueFields(id, restFields); err != nil {
+			return err
+		}
+	}
+
+	if command != "" {
+		if err := client.UpdateIssue(id, command); err != nil {
+			return err
+		}
 	}
 
 	issue, err := client.GetIssue(id)

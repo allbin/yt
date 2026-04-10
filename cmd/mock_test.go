@@ -18,6 +18,7 @@ type mockAPI struct {
 	boardErr  error
 	stateSet      string
 	command       string
+	updatedFields map[string]string
 	updateErr     error
 	fieldValues   []youtrack.BundleValue
 	fieldNames    []string
@@ -35,7 +36,11 @@ func (m *mockAPI) UpdateIssue(_ string, cmd string) error {
 	m.command = cmd
 	return m.updateErr
 }
-func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)  { return m.comments, nil }
+func (m *mockAPI) UpdateIssueFields(_ string, fields map[string]string) error {
+	m.updatedFields = fields
+	return m.updateErr
+}
+func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error) { return m.comments, nil }
 func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error) {
 	return &youtrack.Comment{ID: "mock-comment-1", Text: "mock"}, nil
 }

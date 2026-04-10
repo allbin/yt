@@ -253,6 +253,81 @@ func TestRunIssueCreateEmptySubsystem(t *testing.T) {
 	}
 }
 
+func TestRunIssueUpdateSummary(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "New title"},
+	}
+	run := setupTest(t, mock)
+
+	out, err := run("issue", "update", "PROJ-123", "-S", "New title")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.updatedFields["summary"] != "New title" {
+		t.Errorf("summary = %q, want %q", mock.updatedFields["summary"], "New title")
+	}
+	if mock.command != "" {
+		t.Errorf("command should be empty, got %q", mock.command)
+	}
+	if !strings.Contains(out, "PROJ-123") {
+		t.Errorf("output missing issue ID: %s", out)
+	}
+}
+
+func TestRunIssueUpdateDescription(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "-d", "Updated body")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.updatedFields["description"] != "Updated body" {
+		t.Errorf("description = %q, want %q", mock.updatedFields["description"], "Updated body")
+	}
+	if mock.command != "" {
+		t.Errorf("command should be empty, got %q", mock.command)
+	}
+}
+
+func TestRunIssueUpdateSummaryAndDescription(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "New title"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "-S", "New title", "-d", "New body")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.updatedFields["summary"] != "New title" {
+		t.Errorf("summary = %q, want %q", mock.updatedFields["summary"], "New title")
+	}
+	if mock.updatedFields["description"] != "New body" {
+		t.Errorf("description = %q, want %q", mock.updatedFields["description"], "New body")
+	}
+}
+
+func TestRunIssueUpdateCombinedRESTAndCommand(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "New title"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "-S", "New title", "-s", "In Progress", "-a", "me")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.updatedFields["summary"] != "New title" {
+		t.Errorf("summary = %q, want %q", mock.updatedFields["summary"], "New title")
+	}
+	if mock.command != "State {In Progress} Assignee me" {
+		t.Errorf("command = %q, want %q", mock.command, "State {In Progress} Assignee me")
+	}
+}
+
 func TestRunIssueUpdateNoFlags(t *testing.T) {
 	mock := &mockAPI{
 		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},

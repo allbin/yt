@@ -84,6 +84,8 @@ yt issue update PROJ-123 [flags]
 ```
 
 Flags:
+- `-S, --summary` — set issue summary (uses REST API)
+- `-d, --description` — set issue description (uses REST API)
 - `-s, --state` — set issue state
 - `-a, --assignee` — set assignee (supports "me", login, or full name)
 - `-p, --priority` — set priority
@@ -93,7 +95,7 @@ Flags:
 - `--remove-tag` — remove tag (repeatable)
 - `--field` — set custom field as "Name=Value" (repeatable)
 
-Multiple flags can be combined. Tags are added/removed without affecting existing tags.
+Multiple flags can be combined. Summary/description use the REST API; other fields use the command API. Both can be used in a single invocation.
 
 ## Attachments
 

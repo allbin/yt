@@ -25,7 +25,8 @@ func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)   { return m.b
 func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
 func (m *mockAPI) ListProjects() ([]youtrack.Project, error)        { return nil, nil }
 func (m *mockAPI) ResolveUser(string) (string, error)               { return "", nil }
-func (m *mockAPI) UpdateIssue(string, string) error                 { return nil }
+func (m *mockAPI) UpdateIssue(string, string) error                          { return nil }
+func (m *mockAPI) UpdateIssueFields(string, map[string]string) error         { return nil }
 func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)  { return m.comments, nil }
 func (m *mockAPI) CreateIssue(string, string, string, []string) (*youtrack.Issue, error) {
 	return nil, nil

@@ -4,9 +4,10 @@ Update a YouTrack issue
 
 ### Synopsis
 
-Update fields on a YouTrack issue by executing a command string.
-Supports setting state, assignee, priority, type, and subsystem.
-Multiple flags can be combined in a single invocation.
+Update fields on a YouTrack issue.
+
+Summary and description use the REST API; other fields use the command API.
+Both can be combined in a single invocation.
 
 Use --field to set arbitrary custom fields by name.
 
@@ -21,6 +22,12 @@ yt issue update <id> [flags]
 ```
   # set state
   yt issue update PROJ-123 -s "In Progress"
+
+  # update summary
+  yt issue update PROJ-123 -S "New title"
+
+  # update description
+  yt issue update PROJ-123 -d "Updated description"
 
   # set assignee and priority
   yt issue update PROJ-123 -a me -p Critical
@@ -40,20 +47,22 @@ yt issue update <id> [flags]
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
 
-  # combine all fields
-  yt issue update PROJ-123 -s Open -a john -p Normal -t Task --subsystem API
+  # combine REST and command fields
+  yt issue update PROJ-123 -S "New title" -s "In Progress" -a me
 ```
 
 ### Options
 
 ```
   -a, --assignee string      set assignee (supports 'me')
+  -d, --description string   set issue description
       --field strings        set custom field as "Name=Value" (repeatable)
   -h, --help                 help for update
   -p, --priority string      set priority
       --remove-tag strings   remove tag (repeatable)
   -s, --state string         set issue state
       --subsystem string     set subsystem
+  -S, --summary string       set issue summary
       --tag strings          add tag (repeatable)
   -t, --type string          set issue type
 ```
