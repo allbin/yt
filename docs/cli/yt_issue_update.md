@@ -6,7 +6,7 @@ Update a YouTrack issue
 
 Update fields on a YouTrack issue.
 
-Summary and description use the REST API; other fields use the command API.
+Summary, description, and state use the REST API; other fields use the command API.
 Both can be combined in a single invocation.
 
 Use --field to set arbitrary custom fields by name.
