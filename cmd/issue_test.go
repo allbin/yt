@@ -202,7 +202,10 @@ func TestRunIssueUpdateWithFieldAndSubsystem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	want := "State Open Severity Critical Subsystem API"
+	if mock.stateSet != "Open" {
+		t.Errorf("stateSet = %q, want %q", mock.stateSet, "Open")
+	}
+	want := "Severity Critical Subsystem API"
 	if mock.command != want {
 		t.Errorf("command = %q, want %q", mock.command, want)
 	}
@@ -310,6 +313,27 @@ func TestRunIssueUpdateSummaryAndDescription(t *testing.T) {
 	}
 }
 
+func TestRunIssueUpdateStateOnly(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	out, err := run("issue", "update", "PROJ-123", "-s", "In Progress")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.stateSet != "In Progress" {
+		t.Errorf("stateSet = %q, want %q", mock.stateSet, "In Progress")
+	}
+	if mock.command != "" {
+		t.Errorf("command should be empty, got %q", mock.command)
+	}
+	if !strings.Contains(out, "PROJ-123") {
+		t.Errorf("output missing issue ID: %s", out)
+	}
+}
+
 func TestRunIssueUpdateCombinedRESTAndCommand(t *testing.T) {
 	mock := &mockAPI{
 		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "New title"},
@@ -323,8 +347,11 @@ func TestRunIssueUpdateCombinedRESTAndCommand(t *testing.T) {
 	if mock.updatedFields["summary"] != "New title" {
 		t.Errorf("summary = %q, want %q", mock.updatedFields["summary"], "New title")
 	}
-	if mock.command != "State {In Progress} Assignee me" {
-		t.Errorf("command = %q, want %q", mock.command, "State {In Progress} Assignee me")
+	if mock.stateSet != "In Progress" {
+		t.Errorf("stateSet = %q, want %q", mock.stateSet, "In Progress")
+	}
+	if mock.command != "Assignee me" {
+		t.Errorf("command = %q, want %q", mock.command, "Assignee me")
 	}
 }
 

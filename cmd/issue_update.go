@@ -102,7 +102,10 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		restFields["description"] = updateDescription
 	}
 
-	// Command API: state, assignee, priority, type, subsystem, tags, fields
+	// REST API: state (uses SetIssueState for reliable field-level update)
+	stateChanged := cmd.Flags().Changed("state")
+
+	// Command API: assignee, priority, type, subsystem, tags, fields
 	assignee, err := resolveAssignee(client, updateAssignee)
 	if err != nil {
 		return err
@@ -113,17 +116,23 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		fields = append(fields, "Subsystem="+updateSubsystem)
 	}
 
-	command, err := buildCommand(updateState, assignee, updatePriority, updateType, updateTags, updateRemoveTags, fields)
+	command, err := buildCommand("", assignee, updatePriority, updateType, updateTags, updateRemoveTags, fields)
 	if err != nil {
 		return err
 	}
 
-	if len(restFields) == 0 && command == "" {
+	if len(restFields) == 0 && !stateChanged && command == "" {
 		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --tag, --field, or --remove-tag")
 	}
 
 	if len(restFields) > 0 {
 		if err := client.UpdateIssueFields(id, restFields); err != nil {
+			return err
+		}
+	}
+
+	if stateChanged {
+		if err := client.SetIssueState(id, updateState); err != nil {
 			return err
 		}
 	}
