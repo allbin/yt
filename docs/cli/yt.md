@@ -7,7 +7,18 @@ YouTrack CLI
 Command-line interface for JetBrains YouTrack.
 
 Fetch issues, list and filter them, and output as human-readable text or JSON.
-Requires YOUTRACK_URL and YOUTRACK_TOKEN environment variables.
+
+Configuration is read from environment variables or ~/.config/yt/config.yaml:
+
+  Environment variables:
+    YOUTRACK_URL     Base URL of the YouTrack instance
+    YOUTRACK_TOKEN   Permanent token for authentication
+
+  Config file (~/.config/yt/config.yaml):
+    url: https://youtrack.example.com
+    token: perm:abc123...
+
+Environment variables take precedence over the config file.
 
 ### Options
 

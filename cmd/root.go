@@ -25,7 +25,18 @@ var rootCmd = &cobra.Command{
 	Long: `Command-line interface for JetBrains YouTrack.
 
 Fetch issues, list and filter them, and output as human-readable text or JSON.
-Requires YOUTRACK_URL and YOUTRACK_TOKEN environment variables.`,
+
+Configuration is read from environment variables or ~/.config/yt/config.yaml:
+
+  Environment variables:
+    YOUTRACK_URL     Base URL of the YouTrack instance
+    YOUTRACK_TOKEN   Permanent token for authentication
+
+  Config file (~/.config/yt/config.yaml):
+    url: https://youtrack.example.com
+    token: perm:abc123...
+
+Environment variables take precedence over the config file.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
@@ -75,10 +86,10 @@ func newClient() (youtrack.API, error) {
 	u := viper.GetString("URL")
 	token := viper.GetString("TOKEN")
 	if u == "" {
-		return nil, fmt.Errorf("YOUTRACK_URL not set")
+		return nil, fmt.Errorf("url not configured (set YOUTRACK_URL or url in ~/.config/yt/config.yaml)")
 	}
 	if token == "" {
-		return nil, fmt.Errorf("YOUTRACK_TOKEN not set")
+		return nil, fmt.Errorf("token not configured (set YOUTRACK_TOKEN or token in ~/.config/yt/config.yaml)")
 	}
 	return youtrack.NewClient(u, token), nil
 }
