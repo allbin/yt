@@ -11,6 +11,24 @@ type User struct {
 	FullName string `json:"fullName"`
 }
 
+// CurrentUser returns the user the configured token authenticates as.
+// Used to validate credentials during login.
+func (c *Client) CurrentUser() (*User, error) {
+	params := url.Values{"fields": {"login,fullName"}}
+
+	data, err := c.get("/api/users/me", params)
+	if err != nil {
+		return nil, fmt.Errorf("current user: %w", err)
+	}
+
+	var u User
+	if err := json.Unmarshal(data, &u); err != nil {
+		return nil, fmt.Errorf("parse user: %w", err)
+	}
+
+	return &u, nil
+}
+
 // ResolveUser finds a user by query (login, full name, or partial match).
 // Returns the login name for use in YouTrack queries.
 // Passes through special values like "me" unchanged.

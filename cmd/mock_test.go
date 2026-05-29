@@ -7,26 +7,32 @@ import (
 )
 
 type mockAPI struct {
-	issue     *youtrack.Issue
-	issues    []youtrack.Issue
-	comments  []youtrack.Comment
-	states    []youtrack.StateBundleElement
-	board     *youtrack.Agile
-	boards    []youtrack.Agile
-	projects  []youtrack.Project
-	issueErr  error
-	boardErr  error
-	stateSet      string
-	command       string
-	updatedFields map[string]string
-	updateErr     error
-	fieldValues   []youtrack.BundleValue
-	fieldNames    []string
-	projectFields []youtrack.ProjectField
-	linkTypes     []youtrack.LinkType
-	createdLinks  []string
-	removedLinks  []string
-	linkErr       error
+	issue          *youtrack.Issue
+	issues         []youtrack.Issue
+	comments       []youtrack.Comment
+	states         []youtrack.StateBundleElement
+	board          *youtrack.Agile
+	boards         []youtrack.Agile
+	projects       []youtrack.Project
+	issueErr       error
+	boardErr       error
+	stateSet       string
+	command        string
+	updatedFields  map[string]string
+	updateErr      error
+	fieldValues    []youtrack.BundleValue
+	fieldNames     []string
+	projectFields  []youtrack.ProjectField
+	linkTypes      []youtrack.LinkType
+	createdLinks   []string
+	removedLinks   []string
+	linkErr        error
+	currentUser    *youtrack.User
+	currentUserErr error
+}
+
+func (m *mockAPI) CurrentUser() (*youtrack.User, error) {
+	return m.currentUser, m.currentUserErr
 }
 
 func (m *mockAPI) GetIssue(string) (*youtrack.Issue, error)         { return m.issue, m.issueErr }
@@ -66,7 +72,7 @@ func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) 
 	return nil, nil
 }
 func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
-func (m *mockAPI) DownloadAttachment(string, io.Writer) error           { return nil }
+func (m *mockAPI) DownloadAttachment(string, io.Writer) error            { return nil }
 func (m *mockAPI) GetFieldValues(string, string) ([]youtrack.BundleValue, error) {
 	return m.fieldValues, nil
 }

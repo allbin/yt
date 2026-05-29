@@ -36,6 +36,7 @@ Environment variables take precedence over the config file.
 * [yt issue](yt_issue.md)	 - Show or manage YouTrack issues
 * [yt link](yt_link.md)	 - Create links between issues
 * [yt links](yt_links.md)	 - List an issue's links
+* [yt login](yt_login.md)	 - Authenticate and save YouTrack credentials
 * [yt project](yt_project.md)	 - Inspect YouTrack project details
 * [yt projects](yt_projects.md)	 - List YouTrack projects
 * [yt unlink](yt_unlink.md)	 - Remove a link between issues

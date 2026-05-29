@@ -9,6 +9,20 @@ allowed-tools: Bash(yt *)
 
 Use the `yt` CLI to interact with YouTrack. Always pass `--json` for structured output.
 
+## Authentication
+
+If a command fails with a "url not configured" or "token not configured" error,
+the user needs to authenticate. Have them run:
+
+```bash
+yt login   # prompts for URL + token, validates, saves to ~/.config/yt/config.yaml
+```
+
+Non-interactive: `yt login --url https://youtrack.example.com --token perm:...`.
+The token is validated (fetches the current user) before being saved, so a bad
+token never persists. `YOUTRACK_URL` / `YOUTRACK_TOKEN` env vars still override
+the saved config at runtime.
+
 ## Fetch a single issue
 
 If `$ARGUMENTS` looks like an issue ID (e.g. PROJ-123):

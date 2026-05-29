@@ -10,6 +10,7 @@ type API interface {
 	GetBoardByName(name string) (*Agile, error)
 	GetBoardForView(name string) (*Agile, error)
 	ListProjects() ([]Project, error)
+	CurrentUser() (*User, error)
 	ResolveUser(query string) (string, error)
 	UpdateIssue(id string, command string) error
 	UpdateIssueFields(id string, fields map[string]string) error
