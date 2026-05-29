@@ -23,6 +23,10 @@ type mockAPI struct {
 	fieldValues   []youtrack.BundleValue
 	fieldNames    []string
 	projectFields []youtrack.ProjectField
+	linkTypes     []youtrack.LinkType
+	createdLinks  []string
+	removedLinks  []string
+	linkErr       error
 }
 
 func (m *mockAPI) GetIssue(string) (*youtrack.Issue, error)         { return m.issue, m.issueErr }
@@ -73,3 +77,14 @@ func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error) {
 	return m.projectFields, nil
 }
 func (m *mockAPI) ListFieldNames(string) ([]string, error) { return m.fieldNames, nil }
+func (m *mockAPI) ListLinkTypes() ([]youtrack.LinkType, error) {
+	return m.linkTypes, m.linkErr
+}
+func (m *mockAPI) CreateLink(source, phrase, target string) error {
+	m.createdLinks = append(m.createdLinks, source+"|"+phrase+"|"+target)
+	return m.linkErr
+}
+func (m *mockAPI) RemoveLink(source, linkID, target string) error {
+	m.removedLinks = append(m.removedLinks, source+"|"+linkID+"|"+target)
+	return m.linkErr
+}

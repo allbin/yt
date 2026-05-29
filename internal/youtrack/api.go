@@ -25,4 +25,7 @@ type API interface {
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
 	ListAttachments(issueID string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error
+	ListLinkTypes() ([]LinkType, error)
+	CreateLink(sourceID, phrase, targetID string) error
+	RemoveLink(sourceID, linkID, targetID string) error
 }

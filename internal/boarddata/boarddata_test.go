@@ -44,6 +44,9 @@ func (m *mockAPI) GetProjectFieldValues(string, string) ([]youtrack.BundleValue,
 }
 func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error) { return nil, nil }
 func (m *mockAPI) ListFieldNames(string) ([]string, error)                   { return nil, nil }
+func (m *mockAPI) ListLinkTypes() ([]youtrack.LinkType, error)               { return nil, nil }
+func (m *mockAPI) CreateLink(string, string, string) error                   { return nil }
+func (m *mockAPI) RemoveLink(string, string, string) error                   { return nil }
 
 func TestLoadQueryPath(t *testing.T) {
 	api := &mockAPI{

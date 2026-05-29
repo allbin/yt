@@ -91,6 +91,32 @@ func (c *Client) post(path string, body any) error {
 	return nil
 }
 
+func (c *Client) delete(path string) (err error) {
+	req, err := http.NewRequest("DELETE", c.baseURL+path, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	if resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(resp.Body)
+		return &APIError{StatusCode: resp.StatusCode, Body: string(body)}
+	}
+
+	return nil
+}
+
 func (c *Client) download(path string, w io.Writer) (err error) {
 	u := c.baseURL + path
 

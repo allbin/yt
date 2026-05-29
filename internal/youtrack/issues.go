@@ -12,8 +12,15 @@ const issueFields = "idReadable,summary,description,resolved,created,updated," +
 	"customFields(name,value(name,text,presentation,login,fullName))," +
 	"attachments(id,name,url,size,mimeType,created)"
 
+const linkFields = "links(id,direction," +
+	"linkType(id,name,sourceToTarget,targetToSource,directed,aggregation)," +
+	"issues(id,idReadable,summary))"
+
+// issueDetailFields extends issueFields with links for single-issue views.
+const issueDetailFields = issueFields + "," + linkFields
+
 func (c *Client) GetIssue(id string) (*Issue, error) {
-	params := url.Values{"fields": {issueFields}}
+	params := url.Values{"fields": {issueDetailFields}}
 
 	data, err := c.get("/api/issues/"+url.PathEscape(id), params)
 	if err != nil {
@@ -24,21 +31,27 @@ func (c *Client) GetIssue(id string) (*Issue, error) {
 	if err := json.Unmarshal(data, &issue); err != nil {
 		return nil, fmt.Errorf("parse %s: %w", id, err)
 	}
+	issue.Links = nonEmptyLinks(issue.Links)
 
 	return &issue, nil
 }
 
-func (c *Client) UpdateIssue(id string, command string) error {
+// runCommand applies a YouTrack command query to a single issue.
+func (c *Client) runCommand(query, issueID string) error {
 	body := struct {
 		Query  string `json:"query"`
 		Issues []struct {
 			IDReadable string `json:"idReadable"`
 		} `json:"issues"`
 	}{
-		Query:  command,
-		Issues: []struct{ IDReadable string `json:"idReadable"` }{{IDReadable: id}},
+		Query:  query,
+		Issues: []struct{ IDReadable string `json:"idReadable"` }{{IDReadable: issueID}},
 	}
-	if err := c.post("/api/commands", body); err != nil {
+	return c.post("/api/commands", body)
+}
+
+func (c *Client) UpdateIssue(id string, command string) error {
+	if err := c.runCommand(command, id); err != nil {
 		return fmt.Errorf("update %s: %w", id, err)
 	}
 	return nil

@@ -15,6 +15,7 @@ type Issue struct {
 	Tags         []Tag         `json:"tags"`
 	CustomFields []CustomField `json:"customFields"`
 	Attachments  []Attachment  `json:"attachments"`
+	Links        []IssueLink   `json:"links,omitempty"`
 }
 
 type Attachment struct {

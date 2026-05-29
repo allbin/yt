@@ -59,7 +59,7 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 
 	ew.printf("%s  %s\n", StyleID.Render(v.ID), StyleBold.Render(v.Summary))
 
-	hasMeta := v.State != "" || v.Assignee != "" || v.Priority != "" || v.Type != "" || v.Subsystem != "" || v.Tags != ""
+	hasMeta := v.State != "" || v.Assignee != "" || v.Priority != "" || v.Type != "" || v.Subsystem != "" || v.Tags != "" || len(issue.Links) > 0
 	if hasMeta {
 		ew.println()
 	}
@@ -80,6 +80,9 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 	}
 	if v.Tags != "" {
 		ew.printf("  %s %s\n", StyleLabel.Render("Tags"), StyleDim.Render(v.Tags))
+	}
+	if s := linkSummary(issue.Links); s != "" {
+		ew.printf("%s", s)
 	}
 
 	if v.Description != "" {

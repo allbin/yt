@@ -97,6 +97,52 @@ Flags:
 
 Multiple flags can be combined. Summary, description, and state use the REST API; other fields use the command API. Both can be used in a single invocation.
 
+## Links between issues
+
+Link types are instance-specific and directed. Discover them with:
+
+```bash
+yt link types --json
+```
+
+Each type has an outward and (if directed) inward phrase, e.g. Subtask is
+`parent for` (outward) / `subtask of` (inward). "Make A a subtask of B" and
+"make A parent for B" are the same type in opposite directions.
+
+Create link(s) — the relation accepts kebab, spaced, or squashed forms:
+
+```bash
+yt link <ID> <relation> <target-ID>... [--json]
+
+yt link AX-804 subtask-of AX-332     # AX-804 becomes a subtask of AX-332
+yt link AX-1 relates AX-2            # symmetric
+yt link AX-1 depends-on AX-3
+yt link AX-1 duplicates AX-4
+yt link AX-1 relates AX-2 AX-3       # multiple targets in one call
+```
+
+Linking is idempotent: an existing link is reported as `(already linked)` and
+left unchanged. Unknown relations error and print the valid relations.
+
+Remove a link:
+
+```bash
+yt unlink <ID> <relation> <target-ID> [--json]
+
+yt unlink AX-804 subtask-of AX-332
+```
+
+List an issue's links, grouped by relation:
+
+```bash
+yt links <ID> [--json]
+```
+
+The same links also appear in `yt issue <ID>` output (text and `--json`).
+
+For `link`/`unlink`, `--json` returns the source issue's links after the change;
+for `links` it returns the links array; for `link types` it returns the types.
+
 ## Attachments
 
 Issue details (`yt issue <ID> --json`) include an `attachments` array with name and size.
@@ -135,8 +181,9 @@ For a single issue:
 1. Issue ID & Summary as heading
 2. State, Priority, Assignee, Type as metadata
 3. Subsystem and Tags if present
-4. Description if available
-5. Attachments if present (offer to download when relevant)
+4. Links if present (relation + target IDs)
+5. Description if available
+6. Attachments if present (offer to download when relevant)
 
 For lists: compact table with ID, state, priority, assignee, summary.
 
