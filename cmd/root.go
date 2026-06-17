@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/allbin/yt/internal/git"
+	"github.com/allbin/yt/internal/version"
 	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -20,8 +21,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "yt",
-	Short: "YouTrack CLI",
+	Use:     "yt",
+	Short:   "YouTrack CLI",
+	Version: version.Version(),
 	Long: `Command-line interface for JetBrains YouTrack.
 
 Fetch issues, list and filter them, and output as human-readable text or JSON.
