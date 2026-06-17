@@ -39,5 +39,6 @@ Environment variables take precedence over the config file.
 * [yt login](yt_login.md)	 - Authenticate and save YouTrack credentials
 * [yt project](yt_project.md)	 - Inspect YouTrack project details
 * [yt projects](yt_projects.md)	 - List YouTrack projects
+* [yt sprint](yt_sprint.md)	 - Inspect agile board sprints
 * [yt unlink](yt_unlink.md)	 - Remove a link between issues
 

@@ -66,6 +66,33 @@ yt board <name> --json [-s state] [-a assignee] [-q query] [--sprint name]
 
 Board name matching is case-insensitive. Assignee supports "me", login, or full name.
 
+List a board's sprints (current sprint is marked):
+
+```bash
+yt sprint list <board> --json
+```
+
+### Board / sprint membership
+
+An issue only appears on a sprint-based board (e.g. AllTix) if it is assigned to
+one of the board's sprints. Manage membership with:
+
+```bash
+yt board add <board> <issue>... [--sprint <name>]      # default: current sprint
+yt board remove <board> <issue>... [--sprint <name>]
+
+yt board add AllTix AX-812                  # current sprint
+yt board add AllTix AX-812 AX-813 --sprint 2025-06
+yt board remove AllTix AX-812
+```
+
+Both are idempotent: `add` reports `(already on board)` and `remove` reports
+`(not on board)` without erroring. `--json` returns an array of
+`{issue, board, sprint, changed}`.
+
+`yt issue <ID>` (text and `--json`) includes a `boards` array listing the
+board(s)/sprint(s) the issue is on.
+
 ## Git integration
 
 Create a branch from an issue:
@@ -78,18 +105,28 @@ yt branch <ID> --no-slug # e.g. proj-123
 ## Create an issue
 
 ```bash
-yt issue create --json -p PROJ -s "Summary" [-d "Description"] [-t tag1 -t tag2] [--subsystem API] [--field "Name=Value"]
+yt issue create --json -p PROJ -s "Summary" [-d "Description"] [-t tag1 -t tag2] [--subsystem API] [--field "Name=Value"] [--board AllTix [--sprint 2025-06]] [--like AX-332]
 ```
 
 Flags:
 - `-p, --project` — project short name (required)
 - `-s, --summary` — issue summary (required)
-- `-d, --description` — issue description
+- `-d, --description` — issue description (`@file` reads a file, `-` reads stdin)
 - `-t, --tag` — add tag (repeatable)
 - `--subsystem` — set subsystem
 - `--field` — set custom field as "Name=Value" (repeatable)
+- `--board` — add the new issue to this board (uses `--sprint`, default current)
+- `--sprint` — sprint name for `--board`
+- `--like` — mirror another issue's board + sprint (e.g. a parent story)
 
 Tags are created automatically by YouTrack if they don't exist.
+
+To create a subtask on the same board as its parent story:
+
+```bash
+yt issue create -p AX -s "Subtask summary" --like AX-332 --json
+yt link AX-999 subtask-of AX-332    # then link it
+```
 
 ## Update an issue
 
@@ -99,7 +136,7 @@ yt issue update PROJ-123 [flags]
 
 Flags:
 - `-S, --summary` — set issue summary (uses REST API)
-- `-d, --description` — set issue description (uses REST API)
+- `-d, --description` — set issue description (`@file` reads a file, `-` reads stdin; uses REST API)
 - `-s, --state` — set issue state (uses REST API)
 - `-a, --assignee` — set assignee (supports "me", login, or full name)
 - `-p, --priority` — set priority
@@ -108,8 +145,23 @@ Flags:
 - `--tag` — add tag (repeatable)
 - `--remove-tag` — remove tag (repeatable)
 - `--field` — set custom field as "Name=Value" (repeatable)
+- `--board` — add the issue to this board (uses `--sprint`, default current)
+- `--sprint` — sprint name for `--board`
 
 Multiple flags can be combined. Summary, description, and state use the REST API; other fields use the command API. Both can be used in a single invocation.
+
+## File / stdin input for long text
+
+`-d/--description` (on `create`/`update`) and `-m/--message` (on `comment`)
+accept indirection to avoid the shell mangling multi-line text:
+
+- `@path` reads the value from a file
+- `-` reads the value from stdin
+
+```bash
+yt issue create -p PROJ -s "Writeup" -d @notes.md
+git log -1 --format=%B | yt issue comment PROJ-123 -m -
+```
 
 ## Links between issues
 
@@ -196,8 +248,9 @@ For a single issue:
 2. State, Priority, Assignee, Type as metadata
 3. Subsystem and Tags if present
 4. Links if present (relation + target IDs)
-5. Description if available
-6. Attachments if present (offer to download when relevant)
+5. Board/sprint membership if present
+6. Description if available
+7. Attachments if present (offer to download when relevant)
 
 For lists: compact table with ID, state, priority, assignee, summary.
 

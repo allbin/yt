@@ -43,6 +43,10 @@ func (m *mockAPI) SetIssueState(_ string, state string) error {
 func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) {
 	return nil, nil
 }
+func (m *mockAPI) ListSprintIssues(string, string) ([]string, error)     { return nil, nil }
+func (m *mockAPI) AddIssueToSprint(string, string, string) error         { return nil }
+func (m *mockAPI) RemoveIssueFromSprint(string, string, string) error    { return nil }
+func (m *mockAPI) IssueBoards(string) ([]youtrack.BoardMembership, error) { return nil, nil }
 func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
 func (m *mockAPI) DownloadAttachment(string, io.Writer) error            { return nil }
 func (m *mockAPI) GetFieldValues(string, string) ([]youtrack.BundleValue, error) {

@@ -11,6 +11,13 @@ The created issue is displayed after creation.
 
 Use --subsystem or --field to set custom fields on the new issue.
 
+The description accepts "@path" to read from a file or "-" to read from stdin,
+which avoids shell mangling of multi-line text.
+
+Use --board (with optional --sprint) to place the new issue on an agile board,
+or --like to mirror another issue's board and sprint -- handy for putting a
+subtask on the same board as its parent.
+
 ```
 yt issue create [flags]
 ```
@@ -24,6 +31,12 @@ yt issue create [flags]
   # create with description
   yt issue create -p PROJ -s "Add dark mode" -d "Support system-level dark mode preference"
 
+  # read the description from a file
+  yt issue create -p PROJ -s "Big writeup" -d @notes.md
+
+  # read the description from stdin
+  cat notes.md | yt issue create -p PROJ -s "Big writeup" -d -
+
   # create with subsystem
   yt issue create -p PROJ -s "Fix API auth" --subsystem API
 
@@ -33,6 +46,12 @@ yt issue create [flags]
   # create with tags
   yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
 
+  # place the new issue on a board's current sprint
+  yt issue create -p AX -s "Subtask" --board AllTix
+
+  # put a subtask on the same board+sprint as its parent
+  yt issue create -p AX -s "Subtask" --like AX-332
+
   # output as JSON
   yt issue create -p PROJ -s "New feature" --json
 ```
@@ -40,10 +59,13 @@ yt issue create [flags]
 ### Options
 
 ```
-  -d, --description string   issue description
+      --board string         add the issue to this agile board
+  -d, --description string   issue description (@file or - for stdin)
       --field strings        set custom field as "Name=Value" (repeatable)
   -h, --help                 help for create
+      --like string          mirror another issue's board and sprint
   -p, --project string       project short name (required)
+      --sprint string        sprint for --board (default: current)
       --subsystem string     set subsystem
   -s, --summary string       issue summary (required)
   -t, --tag strings          add tag (repeatable)

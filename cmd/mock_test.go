@@ -34,6 +34,9 @@ type mockAPI struct {
 	removedSprint  []string            // "agileID|sprintID|issueID"
 	issueBoards    []youtrack.BoardMembership
 	sprintErr      error
+
+	createdDescription string
+	addedComment       string
 }
 
 func (m *mockAPI) CurrentUser() (*youtrack.User, error) {
@@ -56,10 +59,12 @@ func (m *mockAPI) UpdateIssueFields(_ string, fields map[string]string) error {
 	return m.updateErr
 }
 func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error) { return m.comments, nil }
-func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error) {
+func (m *mockAPI) AddComment(_ string, text string) (*youtrack.Comment, error) {
+	m.addedComment = text
 	return &youtrack.Comment{ID: "mock-comment-1", Text: "mock"}, nil
 }
-func (m *mockAPI) CreateIssue(_, summary, _ string, tags []string) (*youtrack.Issue, error) {
+func (m *mockAPI) CreateIssue(_, summary, description string, tags []string) (*youtrack.Issue, error) {
+	m.createdDescription = description
 	issue := &youtrack.Issue{IDReadable: "PROJ-999", Summary: summary}
 	for _, t := range tags {
 		issue.Tags = append(issue.Tags, youtrack.Tag{Name: t})

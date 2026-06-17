@@ -3,6 +3,8 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -446,5 +448,143 @@ func TestRunIssueCreateNoFieldsSkipsUpdate(t *testing.T) {
 	}
 	if mock.command != "" {
 		t.Errorf("expected no update command, got %q", mock.command)
+	}
+}
+
+func TestRunIssueShowsBoardMembership(t *testing.T) {
+	run := setupTest(t, &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "AX-812", Summary: "On a board"},
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix", Sprint: "2025-06"}},
+	})
+
+	out, err := run("issue", "AX-812")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "AllTix") || !strings.Contains(out, "2025-06") {
+		t.Errorf("output missing board membership: %s", out)
+	}
+}
+
+func TestRunIssueBoardLookupErrorIgnored(t *testing.T) {
+	run := setupTest(t, &mockAPI{
+		issue:     &youtrack.Issue{IDReadable: "AX-812", Summary: "x"},
+		sprintErr: fmt.Errorf("boom"),
+	})
+
+	out, err := run("issue", "AX-812")
+	if err != nil {
+		t.Fatalf("board lookup failure should not fail the command: %v", err)
+	}
+	if !strings.Contains(out, "AX-812") {
+		t.Errorf("output missing issue: %s", out)
+	}
+}
+
+func TestRunIssueCreateWithBoard(t *testing.T) {
+	mock := &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		board:       testBoard(),
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix", Sprint: "2025-06"}},
+	}
+	run := setupTest(t, mock)
+
+	out, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--board", "AllTix")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mock.addedToSprint) != 1 || mock.addedToSprint[0] != "A1|S2|PROJ-999" {
+		t.Errorf("addedToSprint = %v, want [A1|S2|PROJ-999]", mock.addedToSprint)
+	}
+	if !strings.Contains(out, "AllTix") {
+		t.Errorf("output missing board: %s", out)
+	}
+}
+
+func TestRunIssueCreateLikeMirrorsBoards(t *testing.T) {
+	mock := &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		board:       testBoard(),
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix", Sprint: "2025-06"}},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--like", "AX-332")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mock.addedToSprint) != 1 || mock.addedToSprint[0] != "A1|S2|PROJ-999" {
+		t.Errorf("addedToSprint = %v, want [A1|S2|PROJ-999]", mock.addedToSprint)
+	}
+}
+
+func TestRunIssueCreateLikeNotOnBoard(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		board: testBoard(),
+		// issueBoards empty: parent is on no board.
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--like", "AX-332")
+	if err == nil {
+		t.Fatal("expected error when --like target is on no board")
+	}
+	if !strings.Contains(err.Error(), "not on any board") {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestRunIssueUpdateWithBoard(t *testing.T) {
+	mock := &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "AX-812", Summary: "x"},
+		board:       testBoard(),
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix", Sprint: "2025-06"}},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "AX-812", "--board", "AllTix")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mock.addedToSprint) != 1 || mock.addedToSprint[0] != "A1|S2|AX-812" {
+		t.Errorf("addedToSprint = %v, want [A1|S2|AX-812]", mock.addedToSprint)
+	}
+}
+
+func TestRunIssueCommentFromStdin(t *testing.T) {
+	mock := &mockAPI{}
+	run := setupTest(t, mock)
+
+	rootCmd.SetIn(strings.NewReader("piped comment body"))
+	t.Cleanup(func() { rootCmd.SetIn(nil) })
+
+	out, err := run("issue", "comment", "PROJ-123", "-m", "-")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "mock-comment-1") {
+		t.Errorf("output missing comment ID: %s", out)
+	}
+	if mock.addedComment != "piped comment body" {
+		t.Errorf("addedComment = %q, want piped comment body", mock.addedComment)
+	}
+}
+
+func TestRunIssueCreateDescriptionFromFile(t *testing.T) {
+	dir := t.TempDir()
+	file := filepath.Join(dir, "desc.md")
+	if err := os.WriteFile(file, []byte("multi\nline\nbody"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mock := &mockAPI{issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "x"}}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "PROJ", "-s", "x", "-d", "@"+file)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if mock.createdDescription != "multi\nline\nbody" {
+		t.Errorf("createdDescription = %q, want multi-line body", mock.createdDescription)
 	}
 }

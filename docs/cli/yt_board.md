@@ -57,6 +57,8 @@ yt board [name] [flags]
 ### SEE ALSO
 
 * [yt](yt.md)	 - YouTrack CLI
+* [yt board add](yt_board_add.md)	 - Add issue(s) to a board's sprint
 * [yt board list](yt_board_list.md)	 - List agile boards
+* [yt board remove](yt_board_remove.md)	 - Remove issue(s) from a board's sprint
 * [yt board view](yt_board_view.md)	 - Open interactive board viewer
 

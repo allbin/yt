@@ -11,6 +11,11 @@ Both can be combined in a single invocation.
 
 Use --field to set arbitrary custom fields by name.
 
+The description accepts "@path" to read from a file or "-" to read from stdin,
+which avoids shell mangling of multi-line text.
+
+Use --board (with optional --sprint) to also place the issue on an agile board.
+
 After a successful update the issue is fetched and displayed.
 
 ```
@@ -47,6 +52,12 @@ yt issue update <id> [flags]
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
 
+  # read the description from a file
+  yt issue update PROJ-123 -d @notes.md
+
+  # place the issue on a board's current sprint
+  yt issue update AX-812 --board AllTix
+
   # combine REST and command fields
   yt issue update PROJ-123 -S "New title" -s "In Progress" -a me
 ```
@@ -55,11 +66,13 @@ yt issue update <id> [flags]
 
 ```
   -a, --assignee string      set assignee (supports 'me')
+      --board string         add the issue to this agile board
   -d, --description string   set issue description
       --field strings        set custom field as "Name=Value" (repeatable)
   -h, --help                 help for update
   -p, --priority string      set priority
       --remove-tag strings   remove tag (repeatable)
+      --sprint string        sprint for --board (default: current)
   -s, --state string         set issue state
       --subsystem string     set subsystem
   -S, --summary string       set issue summary
