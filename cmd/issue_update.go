@@ -19,6 +19,8 @@ var (
 	updateTags        []string
 	updateRemoveTags  []string
 	updateFields      []string
+	updateBoard       string
+	updateSprint      string
 )
 
 var updateCmd = &cobra.Command{
@@ -30,6 +32,11 @@ Summary, description, and state use the REST API; other fields use the command A
 Both can be combined in a single invocation.
 
 Use --field to set arbitrary custom fields by name.
+
+The description accepts "@path" to read from a file or "-" to read from stdin,
+which avoids shell mangling of multi-line text.
+
+Use --board (with optional --sprint) to also place the issue on an agile board.
 
 After a successful update the issue is fetched and displayed.`,
 	Example: `  # set state
@@ -59,6 +66,12 @@ After a successful update the issue is fetched and displayed.`,
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
 
+  # read the description from a file
+  yt issue update PROJ-123 -d @notes.md
+
+  # place the issue on a board's current sprint
+  yt issue update AX-812 --board AllTix
+
   # combine REST and command fields
   yt issue update PROJ-123 -S "New title" -s "In Progress" -a me`,
 	Args: cobra.ExactArgs(1),
@@ -77,6 +90,8 @@ func init() {
 	updateCmd.Flags().StringSliceVar(&updateTags, "tag", nil, "add tag (repeatable)")
 	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
 	updateCmd.Flags().StringSliceVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
+	updateCmd.Flags().StringVar(&updateBoard, "board", "", "add the issue to this agile board")
+	updateCmd.Flags().StringVar(&updateSprint, "sprint", "", "sprint for --board (default: current)")
 
 	_ = updateCmd.RegisterFlagCompletionFunc("state", completeFieldValues("State"))
 	_ = updateCmd.RegisterFlagCompletionFunc("priority", completeFieldValues("Priority"))
@@ -99,7 +114,11 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		restFields["summary"] = updateSummary
 	}
 	if cmd.Flags().Changed("description") {
-		restFields["description"] = updateDescription
+		description, err := readTextArg(updateDescription, cmd.InOrStdin())
+		if err != nil {
+			return err
+		}
+		restFields["description"] = description
 	}
 
 	// REST API: state (uses SetIssueState for reliable field-level update)
@@ -121,8 +140,10 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if len(restFields) == 0 && !stateChanged && command == "" {
-		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --tag, --field, or --remove-tag")
+	boardChanged := cmd.Flags().Changed("board")
+
+	if len(restFields) == 0 && !stateChanged && command == "" && !boardChanged {
+		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --tag, --field, --remove-tag, or --board")
 	}
 
 	if len(restFields) > 0 {
@@ -143,9 +164,21 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	if boardChanged {
+		if err := placeOnBoard(client, id, updateBoard, updateSprint); err != nil {
+			return err
+		}
+	}
+
 	issue, err := client.GetIssue(id)
 	if err != nil {
 		return err
+	}
+	if boardChanged {
+		// Best-effort: show resulting board membership; ignore lookup failures.
+		if boards, err := client.IssueBoards(id); err == nil {
+			issue.Boards = boards
+		}
 	}
 
 	w := cmd.OutOrStdout()

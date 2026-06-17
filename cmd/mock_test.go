@@ -29,6 +29,11 @@ type mockAPI struct {
 	linkErr        error
 	currentUser    *youtrack.User
 	currentUserErr error
+	sprintIssues   map[string][]string // "agileID|sprintID" -> issue IDs
+	addedToSprint  []string            // "agileID|sprintID|issueID"
+	removedSprint  []string            // "agileID|sprintID|issueID"
+	issueBoards    []youtrack.BoardMembership
+	sprintErr      error
 }
 
 func (m *mockAPI) CurrentUser() (*youtrack.User, error) {
@@ -70,6 +75,20 @@ func (m *mockAPI) SetIssueState(_ string, state string) error {
 }
 func (m *mockAPI) GetSprintBoard(string, string) (*youtrack.SprintBoard, error) {
 	return nil, nil
+}
+func (m *mockAPI) ListSprintIssues(agileID, sprintID string) ([]string, error) {
+	return m.sprintIssues[agileID+"|"+sprintID], m.sprintErr
+}
+func (m *mockAPI) AddIssueToSprint(agileID, sprintID, issueID string) error {
+	m.addedToSprint = append(m.addedToSprint, agileID+"|"+sprintID+"|"+issueID)
+	return m.sprintErr
+}
+func (m *mockAPI) RemoveIssueFromSprint(agileID, sprintID, issueID string) error {
+	m.removedSprint = append(m.removedSprint, agileID+"|"+sprintID+"|"+issueID)
+	return m.sprintErr
+}
+func (m *mockAPI) IssueBoards(string) ([]youtrack.BoardMembership, error) {
+	return m.issueBoards, m.sprintErr
 }
 func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
 func (m *mockAPI) DownloadAttachment(string, io.Writer) error            { return nil }

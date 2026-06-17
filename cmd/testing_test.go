@@ -22,6 +22,9 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		createSubsystem = ""
 		createTags = nil
 		createFields = nil
+		createBoard = ""
+		createSprint = ""
+		createLike = ""
 		updateState = ""
 		updateAssignee = ""
 		updatePriority = ""
@@ -30,6 +33,11 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		updateTags = nil
 		updateRemoveTags = nil
 		updateFields = nil
+		updateBoard = ""
+		updateSprint = ""
+		boardSprint = ""
+		boardAddSprint = ""
+		boardRemoveSprint = ""
 		loginURL = ""
 		loginToken = ""
 		// Reset cobra's Changed state on all flags.

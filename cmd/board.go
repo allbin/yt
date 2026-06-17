@@ -70,7 +70,7 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	sprintName, err := resolveSprintName(board)
+	sprint, err := resolveSprint(board, boardSprint)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func runBoard(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	boardPart := fmt.Sprintf("Board %s: {%s}", board.Name, sprintName)
+	boardPart := fmt.Sprintf("Board %s: {%s}", board.Name, sprint.Name)
 	if boardQuery != "" {
 		boardPart += " " + boardQuery
 	}
@@ -95,20 +95,25 @@ func runBoard(cmd *cobra.Command, args []string) error {
 	if jsonOutput {
 		return format.JSON(w, issues)
 	}
-	return format.SprintIssues(w, board.Name, sprintName, issues)
+	return format.SprintIssues(w, board.Name, sprint.Name, issues)
 }
 
-func resolveSprintName(board *youtrack.Agile) (string, error) {
-	if boardSprint != "" {
-		for _, s := range board.Sprints {
-			if strings.EqualFold(s.Name, boardSprint) {
-				return s.Name, nil
+// resolveSprint returns the named sprint on the board, or the board's current
+// sprint when name is empty. Matching is case-insensitive.
+func resolveSprint(board *youtrack.Agile, name string) (*youtrack.Sprint, error) {
+	if name != "" {
+		for i := range board.Sprints {
+			if strings.EqualFold(board.Sprints[i].Name, name) {
+				return &board.Sprints[i], nil
 			}
 		}
-		return "", fmt.Errorf("sprint %q not found on board %q", boardSprint, board.Name)
+		if board.CurrentSprint != nil && strings.EqualFold(board.CurrentSprint.Name, name) {
+			return board.CurrentSprint, nil
+		}
+		return nil, fmt.Errorf("sprint %q not found on board %q", name, board.Name)
 	}
 	if board.CurrentSprint == nil {
-		return "", fmt.Errorf("board %q has no current sprint", board.Name)
+		return nil, fmt.Errorf("board %q has no current sprint", board.Name)
 	}
-	return board.CurrentSprint.Name, nil
+	return board.CurrentSprint, nil
 }

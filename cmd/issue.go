@@ -46,6 +46,12 @@ func runIssue(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// Board/sprint membership is supplementary; ignore lookup failures so a
+	// transient board error never blocks displaying the issue itself.
+	if boards, err := client.IssueBoards(id); err == nil {
+		issue.Boards = boards
+	}
+
 	w := cmd.OutOrStdout()
 	if jsonOutput {
 		return format.JSON(w, issue)

@@ -6,16 +6,25 @@ import (
 )
 
 type Issue struct {
-	IDReadable   string        `json:"idReadable"`
-	Summary      string        `json:"summary"`
-	Description  *string       `json:"description"`
-	Resolved     *int64        `json:"resolved"`
-	Created      int64         `json:"created"`
-	Updated      int64         `json:"updated"`
-	Tags         []Tag         `json:"tags"`
-	CustomFields []CustomField `json:"customFields"`
-	Attachments  []Attachment  `json:"attachments"`
-	Links        []IssueLink   `json:"links,omitempty"`
+	IDReadable   string            `json:"idReadable"`
+	Summary      string            `json:"summary"`
+	Description  *string           `json:"description"`
+	Resolved     *int64            `json:"resolved"`
+	Created      int64             `json:"created"`
+	Updated      int64             `json:"updated"`
+	Tags         []Tag             `json:"tags"`
+	CustomFields []CustomField     `json:"customFields"`
+	Attachments  []Attachment      `json:"attachments"`
+	Links        []IssueLink       `json:"links,omitempty"`
+	Boards       []BoardMembership `json:"boards,omitempty"`
+}
+
+// BoardMembership records that an issue sits on a given board's sprint. It is
+// not returned by the YouTrack issue API; the CLI derives it by scanning the
+// board's sprints and populates it for single-issue views.
+type BoardMembership struct {
+	Board  string `json:"board"`
+	Sprint string `json:"sprint"`
 }
 
 type Attachment struct {
@@ -158,8 +167,38 @@ type Agile struct {
 	Projects         []Project             `json:"projects"`
 	CurrentSprint    *Sprint               `json:"currentSprint"`
 	Sprints          []Sprint              `json:"sprints,omitempty"`
+	SprintsSettings  *SprintsSettings      `json:"sprintsSettings,omitempty"`
 	ColumnSettings   *AgileColumnSettings  `json:"columnSettings,omitempty"`
 	SwimlaneSettings *AgileSwimlaneSetting `json:"swimlaneSettings,omitempty"`
+}
+
+// SprintsSettings describes whether a board is sprint-based. When sprints are
+// disabled the board behaves as a single implicit sprint.
+type SprintsSettings struct {
+	DisableSprints bool `json:"disableSprints"`
+}
+
+// SprintList returns the board's sprints, falling back to the current sprint
+// when the sprint list is empty (e.g. sprint-disabled boards).
+func (a *Agile) SprintList() []Sprint {
+	if len(a.Sprints) > 0 {
+		return a.Sprints
+	}
+	if a.CurrentSprint != nil {
+		return []Sprint{*a.CurrentSprint}
+	}
+	return nil
+}
+
+// HasProject reports whether the board includes a project with the given short
+// name (case-insensitive).
+func (a *Agile) HasProject(shortName string) bool {
+	for _, p := range a.Projects {
+		if strings.EqualFold(p.ShortName, shortName) {
+			return true
+		}
+	}
+	return false
 }
 
 type Project struct {

@@ -24,6 +24,10 @@ type API interface {
 	ListProjectFields(projectID string) ([]ProjectField, error)
 	ListFieldNames(issueID string) ([]string, error)
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
+	ListSprintIssues(agileID, sprintID string) ([]string, error)
+	AddIssueToSprint(agileID, sprintID, idReadable string) error
+	RemoveIssueFromSprint(agileID, sprintID, issueID string) error
+	IssueBoards(issueID string) ([]BoardMembership, error)
 	ListAttachments(issueID string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error
 	ListLinkTypes() ([]LinkType, error)
