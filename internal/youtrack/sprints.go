@@ -5,7 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 )
+
+// membershipConcurrency bounds how many sprint-issue lookups run in parallel
+// when deriving an issue's board membership.
+const membershipConcurrency = 8
 
 // ListSprintIssues returns the readable IDs of the issues on a board's sprint.
 func (c *Client) ListSprintIssues(agileID, sprintID string) ([]string, error) {
@@ -58,9 +63,18 @@ func (c *Client) RemoveIssueFromSprint(agileID, sprintID, issueID string) error 
 	return nil
 }
 
+// sprintScan is one board/sprint to check for an issue.
+type sprintScan struct {
+	board, sprint     string
+	agileID, sprintID string
+}
+
 // IssueBoards derives which boards and sprints an issue is on. It lists boards
 // whose projects include the issue's project, then scans those boards' sprints
-// for the issue. Returns an empty slice when the issue is on no scanned board.
+// for the issue. The sprint scans run concurrently (bounded), so latency is
+// roughly one round-trip regardless of sprint count. The returned memberships
+// preserve board/sprint order. Returns an empty slice when the issue is on no
+// scanned board.
 func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 	boards, err := c.ListBoards()
 	if err != nil {
@@ -68,20 +82,47 @@ func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 	}
 
 	prefix := projectPrefix(issueID)
-	var out []BoardMembership
+	var scans []sprintScan
 	for i := range boards {
 		b := &boards[i]
 		if prefix != "" && !b.HasProject(prefix) {
 			continue
 		}
 		for _, s := range b.SprintList() {
-			ids, err := c.ListSprintIssues(b.ID, s.ID)
+			scans = append(scans, sprintScan{b.Name, s.Name, b.ID, s.ID})
+		}
+	}
+	if len(scans) == 0 {
+		return nil, nil
+	}
+
+	member := make([]bool, len(scans))
+	errs := make([]error, len(scans))
+	sem := make(chan struct{}, membershipConcurrency)
+	var wg sync.WaitGroup
+	for i := range scans {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			ids, err := c.ListSprintIssues(scans[i].agileID, scans[i].sprintID)
 			if err != nil {
-				return nil, err
+				errs[i] = err
+				return
 			}
-			if containsFold(ids, issueID) {
-				out = append(out, BoardMembership{Board: b.Name, Sprint: s.Name})
-			}
+			member[i] = containsFold(ids, issueID)
+		}(i)
+	}
+	wg.Wait()
+
+	var out []BoardMembership
+	for i, s := range scans {
+		if errs[i] != nil {
+			return nil, errs[i]
+		}
+		if member[i] {
+			out = append(out, BoardMembership{Board: s.board, Sprint: s.sprint})
 		}
 	}
 	return out, nil

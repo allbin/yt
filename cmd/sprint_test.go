@@ -9,6 +9,9 @@ import (
 )
 
 func testBoard() *youtrack.Agile {
+	// Noon-UTC millis so the rendered date is timezone-stable in tests.
+	start := int64(1748779200000) // 2025-06-01 12:00 UTC
+	finish := int64(1749988800000)
 	return &youtrack.Agile{
 		ID:            "A1",
 		Name:          "AllTix",
@@ -16,7 +19,7 @@ func testBoard() *youtrack.Agile {
 		CurrentSprint: &youtrack.Sprint{ID: "S2", Name: "2025-06"},
 		Sprints: []youtrack.Sprint{
 			{ID: "S1", Name: "2025-05"},
-			{ID: "S2", Name: "2025-06"},
+			{ID: "S2", Name: "2025-06", Start: &start, Finish: &finish},
 		},
 	}
 }
@@ -33,6 +36,9 @@ func TestRunSprintList(t *testing.T) {
 	}
 	if !strings.Contains(out, "current") {
 		t.Errorf("output missing current marker: %s", out)
+	}
+	if !strings.Contains(out, "→") {
+		t.Errorf("output missing sprint date range: %s", out)
 	}
 }
 

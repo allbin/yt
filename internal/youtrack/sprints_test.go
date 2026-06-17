@@ -129,6 +129,32 @@ func TestIssueBoards(t *testing.T) {
 	}
 }
 
+func TestIssueBoardsPropagatesSprintError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/api/agiles":
+			if err := json.NewEncoder(w).Encode([]Agile{{
+				ID:       "A1",
+				Name:     "AllTix",
+				Projects: []Project{{ShortName: "AX"}},
+				Sprints:  []Sprint{{ID: "S1", Name: "a"}, {ID: "S2", Name: "b"}},
+			}}); err != nil {
+				t.Error(err)
+			}
+		case strings.HasPrefix(r.URL.Path, "/api/agiles/A1/sprints/S2/"):
+			w.WriteHeader(http.StatusInternalServerError)
+		default:
+			writeIDs(t, w, "AX-1")
+		}
+	}))
+	defer srv.Close()
+
+	client := NewClient(srv.URL, "token")
+	if _, err := client.IssueBoards("AX-812"); err == nil {
+		t.Fatal("expected error to propagate from a failing sprint scan")
+	}
+}
+
 func writeIDs(t *testing.T, w http.ResponseWriter, ids ...string) {
 	t.Helper()
 	refs := make([]map[string]string, len(ids))

@@ -9,9 +9,9 @@ import (
 
 const (
 	agileFields = "id,name,projects(shortName),currentSprint(id,name)," +
-		"sprints(id,name),sprintsSettings(disableSprints)"
+		"sprints(id,name,start,finish),sprintsSettings(disableSprints)"
 	agileDetail = "id,name,projects(shortName),currentSprint(id,name)," +
-		"sprints(id,name),sprintsSettings(disableSprints)"
+		"sprints(id,name,start,finish),sprintsSettings(disableSprints)"
 	agileBoardView = "id,name,projects(shortName)," +
 		"currentSprint(id,name),sprints(id,name)," +
 		"columnSettings(field(name),columns(presentation,ordinal,fieldValues(name,isResolved)))," +
