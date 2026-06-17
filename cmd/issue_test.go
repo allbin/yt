@@ -518,6 +518,89 @@ func TestRunIssueCreateLikeMirrorsBoards(t *testing.T) {
 	}
 }
 
+func TestRunIssueCreateParentLinksAndMirrors(t *testing.T) {
+	mock := &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		board:       testBoard(),
+		linkTypes:   mockLinkTypes,
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix", Sprint: "2025-06"}},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--parent", "AX-332")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// subtask-of link from the new issue to the parent.
+	if len(mock.createdLinks) != 1 || mock.createdLinks[0] != "PROJ-999|subtask of|AX-332" {
+		t.Errorf("createdLinks = %v, want [PROJ-999|subtask of|AX-332]", mock.createdLinks)
+	}
+	// placed on the parent's board+sprint.
+	if len(mock.addedToSprint) != 1 || mock.addedToSprint[0] != "A1|S2|PROJ-999" {
+		t.Errorf("addedToSprint = %v, want [A1|S2|PROJ-999]", mock.addedToSprint)
+	}
+}
+
+func TestRunIssueCreateParentNotOnBoardStillLinks(t *testing.T) {
+	mock := &mockAPI{
+		issue:     &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		board:     testBoard(),
+		linkTypes: mockLinkTypes,
+		// issueBoards empty: parent is on no board.
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--parent", "AX-332")
+	if err != nil {
+		t.Fatalf("--parent should not fail when parent is on no board: %v", err)
+	}
+	if len(mock.createdLinks) != 1 {
+		t.Errorf("expected subtask link, got %v", mock.createdLinks)
+	}
+	if len(mock.addedToSprint) != 0 {
+		t.Errorf("expected no board placement, got %v", mock.addedToSprint)
+	}
+}
+
+func TestRunIssueCreateParentBoardOverride(t *testing.T) {
+	mock := &mockAPI{
+		issue:     &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		board:     testBoard(),
+		linkTypes: mockLinkTypes,
+		// issueBoards would say the parent is on a different sprint, but --board wins.
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix", Sprint: "2025-05"}},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--parent", "AX-332", "--board", "AllTix", "--sprint", "2025-05")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(mock.createdLinks) != 1 {
+		t.Errorf("expected subtask link, got %v", mock.createdLinks)
+	}
+	// Explicit --board/--sprint used; parent mirror skipped (no duplicate add).
+	if len(mock.addedToSprint) != 1 || mock.addedToSprint[0] != "A1|S1|PROJ-999" {
+		t.Errorf("addedToSprint = %v, want [A1|S1|PROJ-999]", mock.addedToSprint)
+	}
+}
+
+func TestRunIssueCreateParentLikeMutuallyExclusive(t *testing.T) {
+	mock := &mockAPI{
+		issue:     &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},
+		linkTypes: mockLinkTypes,
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "AX", "-s", "Sub", "--parent", "AX-332", "--like", "AX-1")
+	if err == nil {
+		t.Fatal("expected error for mutually exclusive --parent and --like")
+	}
+	if len(mock.createdLinks) != 0 {
+		t.Errorf("should not create link when flags conflict, got %v", mock.createdLinks)
+	}
+}
+
 func TestRunIssueCreateLikeNotOnBoard(t *testing.T) {
 	mock := &mockAPI{
 		issue: &youtrack.Issue{IDReadable: "PROJ-999", Summary: "Sub"},

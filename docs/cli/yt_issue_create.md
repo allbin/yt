@@ -15,8 +15,12 @@ The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
 
 Use --board (with optional --sprint) to place the new issue on an agile board,
-or --like to mirror another issue's board and sprint -- handy for putting a
-subtask on the same board as its parent.
+or --like to mirror another issue's board and sprint.
+
+Use --parent <id> to create the issue as a subtask of another issue: it adds
+a "subtask of" link to the parent and places the new issue on the parent's
+board and sprint in one step -- the common "subtask on the parent's board"
+workflow. When --board is also given it overrides the parent's board.
 
 ```
 yt issue create [flags]
@@ -49,8 +53,11 @@ yt issue create [flags]
   # place the new issue on a board's current sprint
   yt issue create -p AX -s "Subtask" --board AllTix
 
-  # put a subtask on the same board+sprint as its parent
+  # mirror another issue's board+sprint without linking
   yt issue create -p AX -s "Subtask" --like AX-332
+
+  # create a subtask: link to the parent AND share its board+sprint
+  yt issue create -p AX -s "Subtask" --parent AX-332
 
   # output as JSON
   yt issue create -p PROJ -s "New feature" --json
@@ -64,6 +71,7 @@ yt issue create [flags]
       --field strings        set custom field as "Name=Value" (repeatable)
   -h, --help                 help for create
       --like string          mirror another issue's board and sprint
+      --parent string        make the issue a subtask of this issue and share its board
   -p, --project string       project short name (required)
       --sprint string        sprint for --board (default: current)
       --subsystem string     set subsystem

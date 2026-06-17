@@ -17,6 +17,7 @@ var (
 	createBoard       string
 	createSprint      string
 	createLike        string
+	createParent      string
 )
 
 var createCmd = &cobra.Command{
@@ -33,8 +34,12 @@ The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
 
 Use --board (with optional --sprint) to place the new issue on an agile board,
-or --like to mirror another issue's board and sprint -- handy for putting a
-subtask on the same board as its parent.`,
+or --like to mirror another issue's board and sprint.
+
+Use --parent <id> to create the issue as a subtask of another issue: it adds
+a "subtask of" link to the parent and places the new issue on the parent's
+board and sprint in one step -- the common "subtask on the parent's board"
+workflow. When --board is also given it overrides the parent's board.`,
 	Example: `  # create a minimal issue
   yt issue create -p PROJ -s "Fix login bug"
 
@@ -59,8 +64,11 @@ subtask on the same board as its parent.`,
   # place the new issue on a board's current sprint
   yt issue create -p AX -s "Subtask" --board AllTix
 
-  # put a subtask on the same board+sprint as its parent
+  # mirror another issue's board+sprint without linking
   yt issue create -p AX -s "Subtask" --like AX-332
+
+  # create a subtask: link to the parent AND share its board+sprint
+  yt issue create -p AX -s "Subtask" --parent AX-332
 
   # output as JSON
   yt issue create -p PROJ -s "New feature" --json`,
@@ -78,6 +86,8 @@ func init() {
 	createCmd.Flags().StringVar(&createBoard, "board", "", "add the issue to this agile board")
 	createCmd.Flags().StringVar(&createSprint, "sprint", "", "sprint for --board (default: current)")
 	createCmd.Flags().StringVar(&createLike, "like", "", "mirror another issue's board and sprint")
+	createCmd.Flags().StringVar(&createParent, "parent", "", "make the issue a subtask of this issue and share its board")
+	createCmd.MarkFlagsMutuallyExclusive("parent", "like")
 	_ = createCmd.MarkFlagRequired("project")
 	_ = createCmd.MarkFlagRequired("summary")
 
@@ -117,9 +127,29 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	placed := false
-	if createLike != "" {
-		if err := mirrorBoards(client, createLike, issue.IDReadable); err != nil {
+	if createParent != "" {
+		if err := linkAsSubtask(client, issue.IDReadable, createParent); err != nil {
 			return err
+		}
+		// Share the parent's board unless an explicit --board overrides it.
+		// A parent on no board is fine: the subtask link still stands.
+		if createBoard == "" {
+			n, err := mirrorBoards(client, createParent, issue.IDReadable)
+			if err != nil {
+				return err
+			}
+			if n > 0 {
+				placed = true
+			}
+		}
+	}
+	if createLike != "" {
+		n, err := mirrorBoards(client, createLike, issue.IDReadable)
+		if err != nil {
+			return err
+		}
+		if n == 0 {
+			return fmt.Errorf("%s is not on any board", createLike)
 		}
 		placed = true
 	}
@@ -130,7 +160,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 		placed = true
 	}
 
-	if command != "" || placed {
+	if command != "" || placed || createParent != "" {
 		issue, err = client.GetIssue(issue.IDReadable)
 		if err != nil {
 			return err

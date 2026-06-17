@@ -25,6 +25,7 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		createBoard = ""
 		createSprint = ""
 		createLike = ""
+		createParent = ""
 		updateState = ""
 		updateAssignee = ""
 		updatePriority = ""

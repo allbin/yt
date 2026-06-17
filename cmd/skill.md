@@ -117,16 +117,21 @@ Flags:
 - `--field` — set custom field as "Name=Value" (repeatable)
 - `--board` — add the new issue to this board (uses `--sprint`, default current)
 - `--sprint` — sprint name for `--board`
-- `--like` — mirror another issue's board + sprint (e.g. a parent story)
+- `--like` — mirror another issue's board + sprint (no link created)
+- `--parent` — make the issue a subtask of another issue: adds the `subtask of`
+  link AND places it on the parent's board + sprint (mutually exclusive with `--like`)
 
 Tags are created automatically by YouTrack if they don't exist.
 
-To create a subtask on the same board as its parent story:
+To create a subtask on the same board as its parent story, in one command:
 
 ```bash
-yt issue create -p AX -s "Subtask summary" --like AX-332 --json
-yt link AX-999 subtask-of AX-332    # then link it
+yt issue create -p AX -s "Subtask summary" --parent AX-332 --json
 ```
+
+This links the new issue as a subtask of `AX-332` and puts it on `AX-332`'s
+board and sprint. If the parent is on no board, the link is still created. Add
+`--board`/`--sprint` to override where the subtask lands.
 
 ## Update an issue
 

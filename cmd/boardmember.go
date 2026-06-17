@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/allbin/yt/internal/youtrack"
@@ -92,21 +91,30 @@ func placeOnBoard(client youtrack.API, issueID, boardName, sprintName string) er
 	return err
 }
 
-// mirrorBoards copies fromID's board and sprint memberships onto toID.
-func mirrorBoards(client youtrack.API, fromID, toID string) error {
+// mirrorBoards copies fromID's board and sprint memberships onto toID and
+// returns how many memberships were applied. A zero count is not an error here;
+// callers that require at least one board decide how to treat it.
+func mirrorBoards(client youtrack.API, fromID, toID string) (int, error) {
 	memberships, err := client.IssueBoards(fromID)
 	if err != nil {
-		return err
-	}
-	if len(memberships) == 0 {
-		return fmt.Errorf("%s is not on any board", fromID)
+		return 0, err
 	}
 	for _, m := range memberships {
 		if err := placeOnBoard(client, toID, m.Board, m.Sprint); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return len(memberships), nil
+}
+
+// linkAsSubtask makes childID a subtask of parentID. The standard YouTrack
+// "subtask of" relation is resolved against the instance's link types.
+func linkAsSubtask(client youtrack.API, childID, parentID string) error {
+	rel, err := resolveRelation(client, "subtask-of")
+	if err != nil {
+		return err
+	}
+	return client.CreateLink(childID, rel.Phrase, parentID)
 }
 
 // sprintMembers returns the sprint's current issues as a normalized-ID set.
