@@ -142,11 +142,11 @@ func writeIDs(t *testing.T, w http.ResponseWriter, ids ...string) {
 
 func TestProjectPrefix(t *testing.T) {
 	tests := map[string]string{
-		"AX-812":   "AX",
-		"PROJ-1":   "PROJ",
+		"AX-812":    "AX",
+		"PROJ-1":    "PROJ",
 		"FOO-BAR-9": "FOO-BAR",
-		"nodelim":  "",
-		"-5":       "",
+		"nodelim":   "",
+		"-5":        "",
 	}
 	for in, want := range tests {
 		if got := projectPrefix(in); got != want {
