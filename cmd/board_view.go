@@ -18,7 +18,10 @@ var boardViewCmd = &cobra.Command{
 Shows board columns, swimlanes, and issue cards in a navigable grid.
 Supports changing issue state, opening issue details, and refreshing.
 
-Defaults to the current sprint unless --sprint is specified.`,
+Defaults to the current sprint unless --sprint is specified.
+
+Without a terminal to draw on, or with --json, lists the sprint's issues
+instead of opening the viewer -- the same output as "yt board <name>".`,
 	Example: `  # open board viewer
   yt board view HållKoll
 
@@ -34,6 +37,10 @@ func init() {
 }
 
 func runBoardView(cmd *cobra.Command, args []string) error {
+	if !interactive(cmd) {
+		return showBoard(cmd, args[0], boardFilter{sprint: boardViewSprint})
+	}
+
 	client, err := apiFactory()
 	if err != nil {
 		return err

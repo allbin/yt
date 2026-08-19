@@ -11,6 +11,9 @@ Supports changing issue state, opening issue details, and refreshing.
 
 Defaults to the current sprint unless --sprint is specified.
 
+Without a terminal to draw on, or with --json, lists the sprint's issues
+instead of opening the viewer -- the same output as "yt board <name>".
+
 ```
 yt board view [name] [flags]
 ```

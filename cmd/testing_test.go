@@ -37,6 +37,7 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		updateBoard = ""
 		updateSprint = ""
 		boardSprint = ""
+		boardViewSprint = ""
 		boardAddSprint = ""
 		boardRemoveSprint = ""
 		loginURL = ""

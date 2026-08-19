@@ -11,6 +11,9 @@ viewport. Supports changing issue state via an embedded state picker.
 
 If no ID is given, attempts to detect it from the current git branch name.
 
+Without a terminal to draw on, or with --json, prints the issue instead of
+opening the viewer -- the same output as "yt issue <ID>".
+
 ```
 yt issue view [id] [flags]
 ```

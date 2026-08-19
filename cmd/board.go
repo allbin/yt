@@ -55,36 +55,53 @@ func init() {
 	boardCmd.Flags().StringVarP(&boardQuery, "query", "q", "", "additional YouTrack query")
 }
 
+// boardFilter narrows a board's sprint issues.
+type boardFilter struct {
+	sprint   string
+	state    string
+	assignee string
+	query    string
+}
+
 func runBoard(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 {
 		return cmd.Help()
 	}
+	return showBoard(cmd, args[0], boardFilter{
+		sprint:   boardSprint,
+		state:    boardState,
+		assignee: boardAssignee,
+		query:    boardQuery,
+	})
+}
 
+// showBoard writes one sprint's issues, honouring --json.
+func showBoard(cmd *cobra.Command, name string, f boardFilter) error {
 	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
 
-	board, err := client.GetBoardByName(args[0])
+	board, err := client.GetBoardByName(name)
 	if err != nil {
 		return err
 	}
 
-	sprint, err := resolveSprint(board, boardSprint)
+	sprint, err := resolveSprint(board, f.sprint)
 	if err != nil {
 		return err
 	}
 
-	assignee, err := resolveAssignee(client, boardAssignee)
+	assignee, err := resolveAssignee(client, f.assignee)
 	if err != nil {
 		return err
 	}
 
 	boardPart := fmt.Sprintf("Board %s: {%s}", board.Name, sprint.Name)
-	if boardQuery != "" {
-		boardPart += " " + boardQuery
+	if f.query != "" {
+		boardPart += " " + f.query
 	}
-	query := youtrack.BuildQuery("", boardState, assignee, boardPart)
+	query := youtrack.BuildQuery("", f.state, assignee, boardPart)
 
 	issues, err := client.ListIssues(query, 0)
 	if err != nil {
