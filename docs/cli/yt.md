@@ -32,7 +32,7 @@ Environment variables take precedence over the config file.
 * [yt attachment](yt_attachment.md)	 - Manage issue attachments
 * [yt board](yt_board.md)	 - Show board issues or list boards
 * [yt branch](yt_branch.md)	 - Create git branch from issue
-* [yt install](yt_install.md)	 - Install shell completions and Claude Code skill
+* [yt install](yt_install.md)	 - Install shell completions and agent skills
 * [yt issue](yt_issue.md)	 - Show or manage YouTrack issues
 * [yt link](yt_link.md)	 - Create links between issues
 * [yt links](yt_links.md)	 - List an issue's links

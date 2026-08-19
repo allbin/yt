@@ -4,8 +4,10 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
-	"path/filepath"
+	"strings"
 
+	"github.com/allbin/yt/internal/format"
+	"github.com/allbin/yt/internal/skill"
 	"github.com/spf13/cobra"
 )
 
@@ -14,13 +16,24 @@ var skillContent string
 
 var installSkillCmd = &cobra.Command{
 	Use:   "skill",
-	Short: "Install Claude Code skill",
-	Long: `Install the YouTrack CLI skill for Claude Code.
+	Short: "Install the yt skill for Claude Code and Codex",
+	Long: `Install the YouTrack CLI skill for every supported agent found on this machine.
 
-Writes the skill definition to ~/.claude/skills/yt/SKILL.md so that Claude
-can use the yt CLI to fetch and list YouTrack issues.
+Supported agents:
 
-If a legacy command exists at ~/.claude/commands/yt.md it is removed.`,
+  Claude Code   ~/.claude/skills/yt/SKILL.md
+  Codex         ~/.codex/skills/yt/SKILL.md
+
+An agent counts as present when its executable is on $PATH or its config
+directory holds more than the yt skill itself. Agents that are absent are
+skipped, and every agent is reported as installed (nothing was there),
+updated (the file existed with older content), unchanged (already current),
+or skipped.
+
+The skill frontmatter is adapted per agent: Codex only reads name and
+description, so Claude-specific keys are stripped from its copy.
+
+A legacy Claude Code command at ~/.claude/commands/yt.md is removed if present.`,
 	Example: `  yt install skill`,
 	RunE:    runInstallSkill,
 }
@@ -35,23 +48,26 @@ func runInstallSkill(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	skillDir := filepath.Join(home, ".claude", "skills", "yt")
-	skillPath := filepath.Join(skillDir, "SKILL.md")
-
-	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+	results := skill.Install(skillContent, home)
+	if err := format.SkillInstall(cmd.OutOrStdout(), results); err != nil {
 		return err
 	}
-	if err := os.WriteFile(skillPath, []byte(skillContent), 0o644); err != nil {
-		return err
-	}
-	fmt.Println("installed skill to", skillPath)
 
-	legacyPath := filepath.Join(home, ".claude", "commands", "yt.md")
-	if _, err := os.Stat(legacyPath); err == nil {
-		if err := os.Remove(legacyPath); err == nil {
-			fmt.Println("removed legacy command", legacyPath)
+	var failed []string
+	var written int
+	for _, r := range results {
+		switch {
+		case r.Status == skill.StatusFailed:
+			failed = append(failed, r.Name)
+		case r.Status.Written():
+			written++
 		}
 	}
-
+	if len(failed) > 0 {
+		return fmt.Errorf("could not install for %s", strings.Join(failed, ", "))
+	}
+	if written == 0 {
+		return fmt.Errorf("no supported agent found on this machine")
+	}
 	return nil
 }

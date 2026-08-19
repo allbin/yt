@@ -1,15 +1,26 @@
 ## yt install skill
 
-Install Claude Code skill
+Install the yt skill for Claude Code and Codex
 
 ### Synopsis
 
-Install the YouTrack CLI skill for Claude Code.
+Install the YouTrack CLI skill for every supported agent found on this machine.
 
-Writes the skill definition to ~/.claude/skills/yt/SKILL.md so that Claude
-can use the yt CLI to fetch and list YouTrack issues.
+Supported agents:
 
-If a legacy command exists at ~/.claude/commands/yt.md it is removed.
+  Claude Code   ~/.claude/skills/yt/SKILL.md
+  Codex         ~/.codex/skills/yt/SKILL.md
+
+An agent counts as present when its executable is on $PATH or its config
+directory holds more than the yt skill itself. Agents that are absent are
+skipped, and every agent is reported as installed (nothing was there),
+updated (the file existed with older content), unchanged (already current),
+or skipped.
+
+The skill frontmatter is adapted per agent: Codex only reads name and
+description, so Claude-specific keys are stripped from its copy.
+
+A legacy Claude Code command at ~/.claude/commands/yt.md is removed if present.
 
 ```
 yt install skill [flags]
@@ -35,5 +46,5 @@ yt install skill [flags]
 
 ### SEE ALSO
 
-* [yt install](yt_install.md)	 - Install shell completions and Claude Code skill
+* [yt install](yt_install.md)	 - Install shell completions and agent skills
 

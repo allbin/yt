@@ -35,5 +35,5 @@ yt install completion [flags]
 
 ### SEE ALSO
 
-* [yt install](yt_install.md)	 - Install shell completions and Claude Code skill
+* [yt install](yt_install.md)	 - Install shell completions and agent skills
 
