@@ -63,13 +63,9 @@ func (m *mockAPI) AddComment(_ string, text string) (*youtrack.Comment, error) {
 	m.addedComment = text
 	return &youtrack.Comment{ID: "mock-comment-1", Text: "mock"}, nil
 }
-func (m *mockAPI) CreateIssue(_, summary, description string, tags []string) (*youtrack.Issue, error) {
+func (m *mockAPI) CreateIssue(_, summary, description string) (*youtrack.Issue, error) {
 	m.createdDescription = description
-	issue := &youtrack.Issue{IDReadable: "PROJ-999", Summary: summary}
-	for _, t := range tags {
-		issue.Tags = append(issue.Tags, youtrack.Tag{Name: t})
-	}
-	return issue, nil
+	return &youtrack.Issue{IDReadable: "PROJ-999", Summary: summary}, nil
 }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) {
 	return m.states, nil

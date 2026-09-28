@@ -9,7 +9,12 @@ short name and summary. Optionally accepts a description.
 
 The created issue is displayed after creation.
 
-Use --subsystem or --field to set custom fields on the new issue.
+Use --subsystem or --field to set custom fields on the new issue, and --tag
+to tag it; a tag that does not exist yet is created.
+
+Fields, tags, the parent link and board placement are applied after the issue
+exists. If one of them fails, the created issue is still printed and the error
+names its ID: finish it with "yt issue update" rather than creating it again.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.

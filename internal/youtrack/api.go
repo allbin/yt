@@ -16,7 +16,7 @@ type API interface {
 	UpdateIssueFields(id string, fields map[string]string) error
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
-	CreateIssue(project, summary, description string, tags []string) (*Issue, error)
+	CreateIssue(project, summary, description string) (*Issue, error)
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
 	GetFieldValues(issueID, fieldName string) ([]BundleValue, error)

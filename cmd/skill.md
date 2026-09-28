@@ -72,8 +72,12 @@ Before setting `--subsystem`, `--state`, `--priority`, `--type`, or any
 yt project fields PROJ --json
 ```
 
-Tags are the exception — YouTrack creates them on demand, so `--tag` accepts a
-tag that does not exist yet.
+Tags are the exception — YouTrack creates them on demand, so `--tag` on both
+`create` and `update` accepts a tag that does not exist yet.
+
+If `create` prints an issue but exits non-zero, the issue exists and only a
+follow-up step (fields, tags, parent link, board) failed. Finish it with
+`yt issue update <ID>`; running `create` again makes a duplicate.
 
 For long or multi-line text, `-d/--description` and `-m/--message` accept `@path`
 to read a file and `-` to read stdin, which avoids shell mangling:

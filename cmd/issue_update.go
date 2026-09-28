@@ -216,11 +216,14 @@ func buildCommand(state, assignee, priority, typ string, tags, removeTags, field
 		}
 		parts = append(parts, braceWrap(name)+" "+braceWrap(value))
 	}
+	// Tag names stay bare: YouTrack keeps braces as part of a new tag's name
+	// and rejects them on untag, while a bare multi-word name parses up to
+	// the next keyword. Tags go last so nothing follows the final name.
 	for _, t := range tags {
-		parts = append(parts, "tag "+braceWrap(t))
+		parts = append(parts, "tag "+t)
 	}
 	for _, t := range removeTags {
-		parts = append(parts, "untag "+braceWrap(t))
+		parts = append(parts, "untag "+t)
 	}
 	return strings.Join(parts, " "), nil
 }

@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/allbin/yt/internal/format"
+	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +30,12 @@ short name and summary. Optionally accepts a description.
 
 The created issue is displayed after creation.
 
-Use --subsystem or --field to set custom fields on the new issue.
+Use --subsystem or --field to set custom fields on the new issue, and --tag
+to tag it; a tag that does not exist yet is created.
+
+Fields, tags, the parent link and board placement are applied after the issue
+exists. If one of them fails, the created issue is still printed and the error
+names its ID: finish it with "yt issue update" rather than creating it again.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -106,76 +113,104 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	issue, err := client.CreateIssue(createProject, createSummary, description, createTags)
-	if err != nil {
-		return err
-	}
-
 	fields := createFields
 	if cmd.Flags().Changed("subsystem") {
 		fields = append(fields, "Subsystem="+createSubsystem)
 	}
 
-	command, err := buildCommand("", "", "", "", nil, nil, fields)
+	// Built before creating, so a malformed --field leaves no orphan issue.
+	command, err := buildCommand("", "", "", "", createTags, nil, fields)
 	if err != nil {
 		return err
 	}
+
+	issue, err := client.CreateIssue(createProject, createSummary, description)
+	if err != nil {
+		return err
+	}
+
+	// From here on the issue exists. A failed step still prints it and names
+	// its ID, so the caller finishes it with update instead of creating a
+	// duplicate.
+	issue, stepErr := completeCreate(client, issue, command)
+
+	w := cmd.OutOrStdout()
+	if jsonOutput {
+		err = format.JSON(w, issue)
+	} else {
+		err = format.Issue(w, issue)
+	}
+	if err != nil {
+		return err
+	}
+	if stepErr != nil {
+		return fmt.Errorf("%s was created, but a follow-up step failed; finish it with `yt issue update %s`, do not create it again: %w",
+			issue.IDReadable, issue.IDReadable, stepErr)
+	}
+	return nil
+}
+
+// completeCreate applies fields, tags, the parent link and board placement to
+// a newly created issue. It always returns the best-known state of the issue,
+// alongside the first step that failed.
+func completeCreate(client youtrack.API, created *youtrack.Issue, command string) (*youtrack.Issue, error) {
+	id := created.IDReadable
+	placed, err := applyCreateSteps(client, id, command)
+	if command == "" && !placed && createParent == "" && err == nil {
+		return created, nil
+	}
+
+	issue, fetchErr := client.GetIssue(id)
+	if fetchErr != nil {
+		return created, errors.Join(err, fetchErr)
+	}
+	if placed {
+		// Best-effort: show resulting board membership; ignore lookup failures.
+		if boards, err := client.IssueBoards(id); err == nil {
+			issue.Boards = boards
+		}
+	}
+	return issue, err
+}
+
+// applyCreateSteps runs the post-create steps in order, stopping at the first
+// failure. placed reports whether the issue landed on a board.
+func applyCreateSteps(client youtrack.API, id, command string) (placed bool, err error) {
 	if command != "" {
-		if err := client.UpdateIssue(issue.IDReadable, command); err != nil {
-			return fmt.Errorf("set fields on %s: %w", issue.IDReadable, err)
+		if err := client.UpdateIssue(id, command); err != nil {
+			return false, fmt.Errorf("set fields and tags: %w", err)
 		}
 	}
 
-	placed := false
 	if createParent != "" {
-		if err := linkAsSubtask(client, issue.IDReadable, createParent); err != nil {
-			return err
+		if err := linkAsSubtask(client, id, createParent); err != nil {
+			return false, err
 		}
 		// Share the parent's board unless an explicit --board overrides it.
 		// A parent on no board is fine: the subtask link still stands.
 		if createBoard == "" {
-			n, err := mirrorBoards(client, createParent, issue.IDReadable)
+			n, err := mirrorBoards(client, createParent, id)
 			if err != nil {
-				return err
+				return false, err
 			}
-			if n > 0 {
-				placed = true
-			}
+			placed = n > 0
 		}
 	}
 	if createLike != "" {
-		n, err := mirrorBoards(client, createLike, issue.IDReadable)
+		n, err := mirrorBoards(client, createLike, id)
 		if err != nil {
-			return err
+			return placed, err
 		}
 		if n == 0 {
-			return fmt.Errorf("%s is not on any board", createLike)
+			return placed, fmt.Errorf("%s is not on any board", createLike)
 		}
 		placed = true
 	}
 	if createBoard != "" {
-		if err := placeOnBoard(client, issue.IDReadable, createBoard, createSprint); err != nil {
-			return err
+		if err := placeOnBoard(client, id, createBoard, createSprint); err != nil {
+			return placed, err
 		}
 		placed = true
 	}
-
-	if command != "" || placed || createParent != "" {
-		issue, err = client.GetIssue(issue.IDReadable)
-		if err != nil {
-			return err
-		}
-	}
-	if placed {
-		// Best-effort: show resulting board membership; ignore lookup failures.
-		if boards, err := client.IssueBoards(issue.IDReadable); err == nil {
-			issue.Boards = boards
-		}
-	}
-
-	w := cmd.OutOrStdout()
-	if jsonOutput {
-		return format.JSON(w, issue)
-	}
-	return format.Issue(w, issue)
+	return placed, nil
 }

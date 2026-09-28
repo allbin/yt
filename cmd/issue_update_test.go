@@ -29,7 +29,7 @@ func TestBuildCommand(t *testing.T) {
 		{"multi_tag", "", "", "", "", []string{"tech-debt", "scheduler"}, nil, nil, "tag tech-debt tag scheduler", false},
 		{"remove_tag", "", "", "", "", nil, []string{"obsolete"}, nil, "untag obsolete", false},
 		{"tag_and_remove", "", "", "", "", []string{"new-tag"}, []string{"old-tag"}, nil, "tag new-tag untag old-tag", false},
-		{"tag_multi_word", "", "", "", "", []string{"needs review"}, nil, nil, "tag {needs review}", false},
+		{"tag_multi_word", "", "", "", "", []string{"needs review"}, nil, nil, "tag needs review", false},
 		{"state_with_tags", "Open", "", "", "", []string{"tech-debt"}, nil, nil, "State Open tag tech-debt", false},
 		{"field_simple", "", "", "", "", nil, nil, []string{"Severity=Critical"}, "Severity Critical", false},
 		{"field_multi_word_value", "", "", "", "", nil, nil, []string{"Severity=Show Stopper"}, "Severity {Show Stopper}", false},
