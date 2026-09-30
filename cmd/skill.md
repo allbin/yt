@@ -76,8 +76,10 @@ Field values are checked against that list before anything is written, and a
 typo errors with the allowed values. Quote multi-word values
 (`--field "Type=User Story"`); no braces. On a multi-value field (`owned[]`,
 `enum[]`), repeat `--field` with the same name to set several values — the list
-replaces the current values, so include the ones to keep. `--field "Name="`
-clears a field. On `create`, `-t` is `--tag`; the type is `--type`.
+*replaces* the current values, and so do `--subsystem` and the other shorthands.
+To keep existing values, use `--add-field "Name=Value"` / `--remove-field` on
+`update`. `--field "Name="` clears a field. Summary, description, state and
+fields are saved in one request, so a rejected value changes nothing. On `create`, `-t` is `--tag`; the type is `--type`.
 
 A value missing from a field's bundle must be added before it can be set.
 Bundles are often shared across projects and need admin rights, so ask before

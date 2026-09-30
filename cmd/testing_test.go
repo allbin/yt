@@ -38,6 +38,8 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		updateTags = nil
 		updateRemoveTags = nil
 		updateFields = nil
+		updateAddFields = nil
+		updateRemoveFields = nil
 		updateBoard = ""
 		updateSprint = ""
 		boardSprint = ""

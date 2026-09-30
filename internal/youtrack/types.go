@@ -95,6 +95,37 @@ func (cf *CustomField) DisplayValue() string {
 	return ""
 }
 
+// Values returns the field's current values as they are written back: the
+// login for users, the name for bundle values. Nil for an empty field or a
+// field that holds no named values.
+func (cf *CustomField) Values() []string {
+	type item struct {
+		Name  string `json:"name"`
+		Login string `json:"login"`
+	}
+	key := func(it item) string {
+		if it.Login != "" {
+			return it.Login
+		}
+		return it.Name
+	}
+	var arr []item
+	if err := json.Unmarshal(cf.Value, &arr); err == nil {
+		var out []string
+		for _, it := range arr {
+			if k := key(it); k != "" {
+				out = append(out, k)
+			}
+		}
+		return out
+	}
+	var one item
+	if err := json.Unmarshal(cf.Value, &one); err == nil && key(one) != "" {
+		return []string{key(one)}
+	}
+	return nil
+}
+
 // Field returns the display value of the named custom field.
 func (i *Issue) Field(name string) string {
 	for _, cf := range i.CustomFields {

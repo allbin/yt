@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime"
 	"mime/multipart"
 	"net/http"
+	"net/textproto"
 	"net/url"
+	"path/filepath"
 	"strings"
 )
 
@@ -182,13 +185,26 @@ func (c *Client) postJSON(path string, body any) (data []byte, err error) {
 	return respBody, nil
 }
 
+// fileHeader is a multipart file part's header with the content type taken
+// from the name's extension, which YouTrack keeps as the attachment's type.
+func fileHeader(name string) textproto.MIMEHeader {
+	h := textproto.MIMEHeader{}
+	h.Set("Content-Disposition", mime.FormatMediaType("form-data", map[string]string{"name": "file", "filename": name}))
+	ct := mime.TypeByExtension(filepath.Ext(name))
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	h.Set("Content-Type", ct)
+	return h
+}
+
 // postMultipart posts files as a multipart form under the "file" field and
 // returns the response body.
 func (c *Client) postMultipart(path string, files []UploadFile) (data []byte, err error) {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 	for _, f := range files {
-		part, err := mw.CreateFormFile("file", f.Name)
+		part, err := mw.CreatePart(fileHeader(f.Name))
 		if err != nil {
 			return nil, err
 		}

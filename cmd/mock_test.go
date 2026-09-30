@@ -61,8 +61,9 @@ func (m *mockAPI) UpdateIssue(_ string, cmd string) error {
 	m.command = cmd
 	return m.updateErr
 }
-func (m *mockAPI) UpdateIssueFields(_ string, fields map[string]string) error {
-	m.updatedFields = fields
+func (m *mockAPI) UpdateIssueFields(_ string, core map[string]string, custom []youtrack.FieldUpdate) error {
+	m.updatedFields = core
+	m.setFields = custom
 	return m.updateErr
 }
 func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error) { return m.comments, nil }
@@ -125,10 +126,6 @@ func (m *mockAPI) RemoveLink(source, linkID, target string) error {
 }
 func (m *mockAPI) ListIssueFields(string) ([]youtrack.ProjectField, error) {
 	return m.issueFields, nil
-}
-func (m *mockAPI) SetIssueFields(_ string, fields []youtrack.FieldUpdate) error {
-	m.setFields = fields
-	return m.updateErr
 }
 func (m *mockAPI) AddBundleValue(f youtrack.ProjectField, name string) error {
 	m.addedBundle = append(m.addedBundle, f.Name+"|"+name)

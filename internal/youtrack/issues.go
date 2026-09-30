@@ -57,8 +57,17 @@ func (c *Client) UpdateIssue(id string, command string) error {
 	return nil
 }
 
-func (c *Client) UpdateIssueFields(id string, fields map[string]string) error {
-	if err := c.post("/api/issues/"+url.PathEscape(id), fields); err != nil {
+// UpdateIssueFields writes core fields (summary, description) and custom
+// fields in one request, so the server applies all or none of them.
+func (c *Client) UpdateIssueFields(id string, core map[string]string, custom []FieldUpdate) error {
+	body := make(map[string]any, len(core)+1)
+	for k, v := range core {
+		body[k] = v
+	}
+	if len(custom) > 0 {
+		body["customFields"] = custom
+	}
+	if err := c.post("/api/issues/"+url.PathEscape(id), body); err != nil {
 		return fmt.Errorf("update fields %s: %w", id, err)
 	}
 	return nil

@@ -13,7 +13,7 @@ type API interface {
 	CurrentUser() (*User, error)
 	ResolveUser(query string) (string, error)
 	UpdateIssue(id string, command string) error
-	UpdateIssueFields(id string, fields map[string]string) error
+	UpdateIssueFields(id string, core map[string]string, custom []FieldUpdate) error
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
 	CreateIssue(project, summary, description string, fields []FieldUpdate) (*Issue, error)
@@ -24,7 +24,6 @@ type API interface {
 	ListProjectFields(projectID string) ([]ProjectField, error)
 	ListFieldNames(issueID string) ([]string, error)
 	ListIssueFields(issueID string) ([]ProjectField, error)
-	SetIssueFields(issueID string, fields []FieldUpdate) error
 	AddBundleValue(field ProjectField, name string) error
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
 	ListSprintIssues(agileID, sprintID string) ([]string, error)

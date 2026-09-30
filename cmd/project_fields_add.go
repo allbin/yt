@@ -24,8 +24,9 @@ bundle.`,
 
   # add several values at once
   yt project fields add HK Subsystem "Admin UI" Billing`,
-	Args: cobra.MinimumNArgs(3),
-	RunE: runProjectFieldsAdd,
+	Args:              cobra.MinimumNArgs(3),
+	RunE:              runProjectFieldsAdd,
+	ValidArgsFunction: completeProjectFieldsAdd,
 }
 
 func init() {
@@ -80,4 +81,29 @@ func bundleValue(values []youtrack.BundleValue, name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// completeProjectFieldsAdd completes the project, then its field names.
+func completeProjectFieldsAdd(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	switch len(args) {
+	case 0:
+		return completeProjectNames(cmd, args, toComplete)
+	case 1:
+		client, err := apiFactory()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		fields, err := client.ListProjectFields(args[0])
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		var out []string
+		for _, f := range fields {
+			if f.BundleID != "" && strings.HasPrefix(strings.ToLower(f.Name), strings.ToLower(toComplete)) {
+				out = append(out, f.Name)
+			}
+		}
+		return out, cobra.ShellCompDirectiveNoFileComp
+	}
+	return nil, cobra.ShellCompDirectiveNoFileComp
 }

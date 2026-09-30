@@ -93,6 +93,8 @@ func TestFieldUpdatePayloads(t *testing.T) {
 			`{"$type":"SimpleIssueCustomField","name":"Points","value":5}`},
 		{"float", ProjectField{Name: "Ratio", ValueType: "float"}, []string{"0.5"},
 			`{"$type":"SimpleIssueCustomField","name":"Ratio","value":0.5}`},
+		{"date_and_time", ProjectField{Name: "Starts", ValueType: "date and time"}, []string{"2026-10-01T09:00:00Z"},
+			`{"$type":"SimpleIssueCustomField","name":"Starts","value":` + jsonInt(time.Date(2026, 10, 1, 9, 0, 0, 0, time.UTC).UnixMilli()) + `}`},
 		{"date", ProjectField{Name: "Due Date", ValueType: "date"}, []string{"2026-10-01"},
 			`{"$type":"DateIssueCustomField","name":"Due Date","value":` + jsonInt(due) + `}`},
 	}
@@ -125,6 +127,8 @@ func TestFieldUpdateErrors(t *testing.T) {
 		{"unknown_value", enum, []string{"Story"}, `Type has no value "Story"; allowed: Bug, Task`},
 		{"single_given_two", enum, []string{"Bug", "Task"}, "Type takes a single value, got 2"},
 		{"bad_integer", ProjectField{Name: "Points", ValueType: "integer"}, []string{"five"}, "expects an integer"},
+		{"nan_float", ProjectField{Name: "Ratio", ValueType: "float"}, []string{"NaN"}, "expects a number"},
+		{"inf_float", ProjectField{Name: "Ratio", ValueType: "float"}, []string{"+Inf"}, "expects a number"},
 		{"bad_date", ProjectField{Name: "Due", ValueType: "date"}, []string{"tomorrow"}, "invalid date"},
 		{"unsupported", ProjectField{Name: "X", ValueType: "mystery"}, []string{"v"}, "not supported"},
 	}
@@ -161,7 +165,7 @@ func TestCreateIssueSendsCustomFields(t *testing.T) {
 	}
 }
 
-func TestSetIssueFields(t *testing.T) {
+func TestUpdateIssueFieldsOneRequest(t *testing.T) {
 	var gotPath, gotBody string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
@@ -171,13 +175,13 @@ func TestSetIssueFields(t *testing.T) {
 	defer srv.Close()
 
 	u := FieldUpdate{Type: "SingleEnumIssueCustomField", Name: "Type", Value: namedValue{Name: "Bug"}}
-	if err := NewClient(srv.URL, "token").SetIssueFields("HK-1", []FieldUpdate{u}); err != nil {
+	if err := NewClient(srv.URL, "token").UpdateIssueFields("HK-1", map[string]string{"summary": "S"}, []FieldUpdate{u}); err != nil {
 		t.Fatal(err)
 	}
 	if gotPath != "/api/issues/HK-1" {
 		t.Errorf("path = %s", gotPath)
 	}
-	if want := `{"customFields":[{"$type":"SingleEnumIssueCustomField","name":"Type","value":{"name":"Bug"}}]}`; gotBody != want {
+	if want := `{"customFields":[{"$type":"SingleEnumIssueCustomField","name":"Type","value":{"name":"Bug"}}],"summary":"S"}`; gotBody != want {
 		t.Errorf("body = %s, want %s", gotBody, want)
 	}
 }
@@ -211,6 +215,7 @@ func TestAddBundleValue(t *testing.T) {
 
 func TestUploadAttachments(t *testing.T) {
 	got := map[string]string{}
+	types := map[string]string{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/issues/HK-1/attachments" {
 			t.Errorf("path = %s", r.URL.Path)
@@ -229,6 +234,7 @@ func TestUploadAttachments(t *testing.T) {
 			}
 			b, _ := io.ReadAll(part)
 			got[part.FileName()] = string(b)
+			types[part.FileName()] = part.Header.Get("Content-Type")
 		}
 		_, _ = io.WriteString(w, `[{"id":"1","name":"a.png","size":3},{"id":"2","name":"b.txt","size":5}]`)
 	}))
@@ -244,7 +250,81 @@ func TestUploadAttachments(t *testing.T) {
 	if got["a.png"] != "png" || got["b.txt"] != "hello" {
 		t.Errorf("server received %v", got)
 	}
+	if types["a.png"] != "image/png" || !strings.HasPrefix(types["b.txt"], "text/plain") {
+		t.Errorf("content types = %v", types)
+	}
 	if len(atts) != 2 || atts[1].Name != "b.txt" {
 		t.Errorf("attachments = %+v", atts)
+	}
+}
+
+func TestListProjectFields(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/admin/projects/HK/customFields" {
+			t.Errorf("path = %s", r.URL.Path)
+		}
+		_, _ = io.WriteString(w, `[
+ {"field":{"name":"Customer","fieldType":{"id":"enum[*]","isMultiValue":true}},
+  "bundle":{"$type":"EnumBundle","id":"94-19","name":"Mobilix: Customer","values":[{"name":"VL","ordinal":1},{"name":"LTS","ordinal":0}]}},
+ {"field":{"name":"Estimation","fieldType":{"id":"period","isMultiValue":false}}}
+]`)
+	}))
+	defer srv.Close()
+
+	fields, err := NewClient(srv.URL, "token").ListProjectFields("HK")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(fields) != 2 {
+		t.Fatalf("got %d fields", len(fields))
+	}
+	c, e := fields[0], fields[1]
+	if c.Type != "enum[]" || !c.Multi || c.BundleID != "94-19" || c.BundleType != "EnumBundle" || c.Values[0].Name != "LTS" {
+		t.Errorf("Customer = %+v", c)
+	}
+	if e.Type != "period" || e.BundleID != "" {
+		t.Errorf("Estimation = %+v", e)
+	}
+}
+
+func TestParseDateTime(t *testing.T) {
+	local := time.Date(2026, 10, 1, 9, 30, 0, 0, time.Local).UnixMilli()
+	tests := []struct {
+		in   string
+		want int64
+	}{
+		{"2026-10-01 09:30", local},
+		{"2026-10-01T09:30:00Z", time.Date(2026, 10, 1, 9, 30, 0, 0, time.UTC).UnixMilli()},
+		{"2026-10-01", time.Date(2026, 10, 1, 0, 0, 0, 0, time.Local).UnixMilli()},
+	}
+	for _, tt := range tests {
+		got, err := parseDate(tt.in, false)
+		if err != nil || got != tt.want {
+			t.Errorf("parseDate(%q) = %d, %v; want %d", tt.in, got, err, tt.want)
+		}
+	}
+	if _, err := parseDate("2026-10-01 09:30", true); err == nil {
+		t.Error("date-only field accepted a time")
+	}
+}
+
+func TestCustomFieldValues(t *testing.T) {
+	tests := []struct {
+		raw  string
+		want []string
+	}{
+		{`[{"name":"API"},{"name":"Management UI"}]`, []string{"API", "Management UI"}},
+		{`[{"name":"Jane Doe","login":"jdoe"}]`, []string{"jdoe"}},
+		{`{"name":"Bug"}`, []string{"Bug"}},
+		{`[]`, nil},
+		{`null`, nil},
+		{`"text"`, nil},
+	}
+	for _, tt := range tests {
+		cf := CustomField{Value: json.RawMessage(tt.raw)}
+		got := cf.Values()
+		if strings.Join(got, "|") != strings.Join(tt.want, "|") || len(got) != len(tt.want) {
+			t.Errorf("Values(%s) = %q, want %q", tt.raw, got, tt.want)
+		}
 	}
 }

@@ -195,7 +195,7 @@ func createFieldUpdates(cmd *cobra.Command, client youtrack.API) ([]youtrack.Fie
 	if err != nil {
 		return nil, err
 	}
-	return fieldUpdates(client, schema, args)
+	return fieldUpdates(client, schema, fieldChanges{set: args}, nil)
 }
 
 // linkArg is a resolved --link: the relation phrase and its target.

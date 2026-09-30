@@ -2,7 +2,7 @@ package youtrack
 
 import (
 	"fmt"
-	"net/url"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -94,7 +94,12 @@ func (f ProjectField) Update(values []string) (FieldUpdate, error) {
 			u.Value = map[string]string{"text": value}
 		}
 	case "date", "date and time":
+		// Date-only fields have their own $type; date-and-time fields are
+		// simple fields holding a timestamp.
 		u.Type = "DateIssueCustomField"
+		if f.ValueType == "date and time" {
+			u.Type = "SimpleIssueCustomField"
+		}
 		if value != "" {
 			ms, err := parseDate(value, f.ValueType == "date")
 			if err != nil {
@@ -120,7 +125,7 @@ func (f ProjectField) Update(values []string) (FieldUpdate, error) {
 		u.Type = "SimpleIssueCustomField"
 		if value != "" {
 			n, err := strconv.ParseFloat(value, 64)
-			if err != nil {
+			if err != nil || math.IsNaN(n) || math.IsInf(n, 0) {
 				return FieldUpdate{}, fmt.Errorf("%s expects a number, got %q", f.Name, value)
 			}
 			u.Value = n
@@ -194,15 +199,4 @@ func nonEmpty(values []string) []string {
 		}
 	}
 	return out
-}
-
-// SetIssueFields writes custom fields on an issue in one request.
-func (c *Client) SetIssueFields(issueID string, fields []FieldUpdate) error {
-	body := struct {
-		CustomFields []FieldUpdate `json:"customFields"`
-	}{fields}
-	if err := c.post("/api/issues/"+url.PathEscape(issueID), body); err != nil {
-		return fmt.Errorf("set fields on %s: %w", issueID, err)
-	}
-	return nil
 }

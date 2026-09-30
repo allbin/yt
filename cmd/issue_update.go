@@ -18,7 +18,9 @@ var (
 	updateDescription string
 	updateTags        []string
 	updateRemoveTags  []string
-	updateFields      []string
+	updateFields       []string
+	updateAddFields    []string
+	updateRemoveFields []string
 	updateBoard       string
 	updateSprint      string
 )
@@ -31,12 +33,16 @@ var updateCmd = &cobra.Command{
 Use --field to set any custom field by name, as "Name=Value". Values with
 spaces need no escaping beyond shell quoting. Repeat --field with the same name
 to set several values on a multi-value field; the list replaces the current
-values. An empty value clears the field. Values are checked against the
-field's allowed values before anything is written; "yt project fields PROJ"
-lists them.
+values. An empty value clears the field. To keep the current values of a
+multi-value field, use --add-field and --remove-field instead.
 
---assignee, --priority, --type and --subsystem are shorthands for --field on
-those fields. Assignee accepts "me", a login or a name.
+--state, --assignee, --priority, --type and --subsystem are shorthands for
+--field on those fields, so --subsystem also replaces. Assignee accepts "me",
+a login or a name.
+
+Values are checked against the field's allowed values before anything is
+written ("yt project fields PROJ" lists them), and summary, description and
+fields are saved in one request: either all of them change or none do.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -68,6 +74,9 @@ After a successful update the issue is fetched and displayed.`,
   # set several values on a multi-value field
   yt issue update PROJ-123 --field "Subsystem=API" --field "Subsystem=Management UI"
 
+  # add to / remove from a multi-value field, keeping other values
+  yt issue update PROJ-123 --add-field "Subsystem=API" --remove-field "Subsystem=Mobile"
+
   # clear a field
   yt issue update PROJ-123 --field "Subsystem="
 
@@ -98,12 +107,14 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateAssignee, "assignee", "a", "", "set assignee (supports 'me')")
 	updateCmd.Flags().StringVarP(&updatePriority, "priority", "p", "", "set priority")
 	updateCmd.Flags().StringVarP(&updateType, "type", "t", "", "set issue type")
-	updateCmd.Flags().StringVar(&updateSubsystem, "subsystem", "", "set subsystem")
+	updateCmd.Flags().StringVar(&updateSubsystem, "subsystem", "", "set subsystem, replacing current values (see --add-field)")
 	updateCmd.Flags().StringVarP(&updateSummary, "summary", "S", "", "set issue summary")
 	updateCmd.Flags().StringVarP(&updateDescription, "description", "d", "", "set issue description")
 	updateCmd.Flags().StringSliceVar(&updateTags, "tag", nil, "add tag (repeatable)")
 	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
 	updateCmd.Flags().StringArrayVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
+	updateCmd.Flags().StringArrayVar(&updateAddFields, "add-field", nil, `add a value to a multi-value field, as "Name=Value" (repeatable)`)
+	updateCmd.Flags().StringArrayVar(&updateRemoveFields, "remove-field", nil, `remove a value from a multi-value field, as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringVar(&updateBoard, "board", "", "add the issue to this agile board")
 	updateCmd.Flags().StringVar(&updateSprint, "sprint", "", "sprint for --board (default: current)")
 
@@ -112,6 +123,8 @@ func init() {
 	_ = updateCmd.RegisterFlagCompletionFunc("type", completeFieldValues("Type"))
 	_ = updateCmd.RegisterFlagCompletionFunc("subsystem", completeFieldValues("Subsystem"))
 	_ = updateCmd.RegisterFlagCompletionFunc("field", completeFieldFlag(true))
+	_ = updateCmd.RegisterFlagCompletionFunc("add-field", completeFieldFlag(true))
+	_ = updateCmd.RegisterFlagCompletionFunc("remove-field", completeFieldFlag(true))
 }
 
 func runIssueUpdate(cmd *cobra.Command, args []string) error {
@@ -135,52 +148,30 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		restFields["description"] = description
 	}
 
-	stateChanged := cmd.Flags().Changed("state")
-
-	rawFields, err := parseFieldArgs(updateFields)
+	changes, err := updateFieldChanges(cmd)
 	if err != nil {
 		return err
 	}
-	fieldArgs := append(flagFieldArgs(cmd.Flags(),
-		[2]string{"assignee", "Assignee"},
-		[2]string{"priority", "Priority"},
-		[2]string{"type", "Type"},
-		[2]string{"subsystem", "Subsystem"},
-	), rawFields...)
 
 	command := tagCommand(updateTags, updateRemoveTags)
 	boardChanged := cmd.Flags().Changed("board")
 
-	if len(restFields) == 0 && !stateChanged && len(fieldArgs) == 0 && command == "" && !boardChanged {
-		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --tag, --field, --remove-tag, or --board")
+	if len(restFields) == 0 && changes.empty() && command == "" && !boardChanged {
+		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --field, --add-field, --remove-field, --tag, --remove-tag, or --board")
 	}
 
 	// Resolved before any write, so a bad value changes nothing.
 	var updates []youtrack.FieldUpdate
-	if len(fieldArgs) > 0 {
-		schema, err := client.ListIssueFields(id)
-		if err != nil {
-			return err
-		}
-		if updates, err = fieldUpdates(client, schema, fieldArgs); err != nil {
+	if !changes.empty() {
+		if updates, err = resolveUpdateFields(client, id, changes); err != nil {
 			return err
 		}
 	}
 
-	if len(restFields) > 0 {
-		if err := client.UpdateIssueFields(id, restFields); err != nil {
-			return err
-		}
-	}
-
-	if stateChanged {
-		if err := client.SetIssueState(id, updateState); err != nil {
-			return err
-		}
-	}
-
-	if len(updates) > 0 {
-		if err := client.SetIssueFields(id, updates); err != nil {
+	// Summary, description and custom fields go in one request: the server
+	// applies all of them or none.
+	if len(restFields) > 0 || len(updates) > 0 {
+		if err := client.UpdateIssueFields(id, restFields, updates); err != nil {
 			return err
 		}
 	}
@@ -213,4 +204,53 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return format.JSON(w, issue)
 	}
 	return format.Issue(w, issue)
+}
+
+// updateFieldChanges collects the custom field flags. --state and the other
+// shorthands are assignments to their fields, ahead of --field.
+func updateFieldChanges(cmd *cobra.Command) (fieldChanges, error) {
+	set, err := parseFieldArgs(updateFields)
+	if err != nil {
+		return fieldChanges{}, err
+	}
+	add, err := parseFieldArgs(updateAddFields)
+	if err != nil {
+		return fieldChanges{}, err
+	}
+	remove, err := parseFieldArgs(updateRemoveFields)
+	if err != nil {
+		return fieldChanges{}, err
+	}
+	shorthands := flagFieldArgs(cmd.Flags(),
+		[2]string{"state", "State"},
+		[2]string{"assignee", "Assignee"},
+		[2]string{"priority", "Priority"},
+		[2]string{"type", "Type"},
+		[2]string{"subsystem", "Subsystem"},
+	)
+	return fieldChanges{set: append(shorthands, set...), add: add, remove: remove}, nil
+}
+
+// resolveUpdateFields resolves changes against the issue's fields. The issue
+// is read only when add or remove need its current values.
+func resolveUpdateFields(client youtrack.API, id string, changes fieldChanges) ([]youtrack.FieldUpdate, error) {
+	schema, err := client.ListIssueFields(id)
+	if err != nil {
+		return nil, err
+	}
+	var issue *youtrack.Issue
+	current := func(name string) []string {
+		for _, cf := range issue.CustomFields {
+			if cf.Name == name {
+				return cf.Values()
+			}
+		}
+		return nil
+	}
+	if len(changes.add) > 0 || len(changes.remove) > 0 {
+		if issue, err = client.GetIssue(id); err != nil {
+			return nil, err
+		}
+	}
+	return fieldUpdates(client, schema, changes, current)
 }

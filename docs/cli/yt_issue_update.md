@@ -9,12 +9,16 @@ Update fields on a YouTrack issue.
 Use --field to set any custom field by name, as "Name=Value". Values with
 spaces need no escaping beyond shell quoting. Repeat --field with the same name
 to set several values on a multi-value field; the list replaces the current
-values. An empty value clears the field. Values are checked against the
-field's allowed values before anything is written; "yt project fields PROJ"
-lists them.
+values. An empty value clears the field. To keep the current values of a
+multi-value field, use --add-field and --remove-field instead.
 
---assignee, --priority, --type and --subsystem are shorthands for --field on
-those fields. Assignee accepts "me", a login or a name.
+--state, --assignee, --priority, --type and --subsystem are shorthands for
+--field on those fields, so --subsystem also replaces. Assignee accepts "me",
+a login or a name.
+
+Values are checked against the field's allowed values before anything is
+written ("yt project fields PROJ" lists them), and summary, description and
+fields are saved in one request: either all of them change or none do.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -54,6 +58,9 @@ yt issue update <id> [flags]
   # set several values on a multi-value field
   yt issue update PROJ-123 --field "Subsystem=API" --field "Subsystem=Management UI"
 
+  # add to / remove from a multi-value field, keeping other values
+  yt issue update PROJ-123 --add-field "Subsystem=API" --remove-field "Subsystem=Mobile"
+
   # clear a field
   yt issue update PROJ-123 --field "Subsystem="
 
@@ -79,19 +86,21 @@ yt issue update <id> [flags]
 ### Options
 
 ```
-  -a, --assignee string      set assignee (supports 'me')
-      --board string         add the issue to this agile board
-  -d, --description string   set issue description
-      --field stringArray    set custom field as "Name=Value" (repeatable)
-  -h, --help                 help for update
-  -p, --priority string      set priority
-      --remove-tag strings   remove tag (repeatable)
-      --sprint string        sprint for --board (default: current)
-  -s, --state string         set issue state
-      --subsystem string     set subsystem
-  -S, --summary string       set issue summary
-      --tag strings          add tag (repeatable)
-  -t, --type string          set issue type
+      --add-field stringArray      add a value to a multi-value field, as "Name=Value" (repeatable)
+  -a, --assignee string            set assignee (supports 'me')
+      --board string               add the issue to this agile board
+  -d, --description string         set issue description
+      --field stringArray          set custom field as "Name=Value" (repeatable)
+  -h, --help                       help for update
+  -p, --priority string            set priority
+      --remove-field stringArray   remove a value from a multi-value field, as "Name=Value" (repeatable)
+      --remove-tag strings         remove tag (repeatable)
+      --sprint string              sprint for --board (default: current)
+  -s, --state string               set issue state
+      --subsystem string           set subsystem, replacing current values (see --add-field)
+  -S, --summary string             set issue summary
+      --tag strings                add tag (repeatable)
+  -t, --type string                set issue type
 ```
 
 ### Options inherited from parent commands

@@ -22,6 +22,7 @@ func hkSchema() []youtrack.ProjectField {
 		return out
 	}
 	return []youtrack.ProjectField{
+		{Name: "State", ValueType: "state", Values: values("Open", "In Progress", "Done"), BundleType: "StateBundle"},
 		{Name: "Type", ValueType: "enum", Values: values("Bug", "Task", "User Story"), BundleType: "EnumBundle", BundleID: "94-1"},
 		{Name: "Priority", ValueType: "enum", Values: values("Critical", "Normal"), BundleType: "EnumBundle", BundleID: "94-0"},
 		{Name: "Subsystem", ValueType: "ownedField", Multi: true, Values: values("API", "Management UI"), BundleType: "OwnedBundle", BundleID: "116-5"},
@@ -261,5 +262,82 @@ func TestRunAttachmentUploadMissingFileUploadsNothing(t *testing.T) {
 	}
 	if mock.uploaded != nil {
 		t.Errorf("uploaded %q despite the missing file", mock.uploaded)
+	}
+}
+
+func issueWithFields(fields map[string]string) *youtrack.Issue {
+	issue := &youtrack.Issue{IDReadable: "HK-1"}
+	for name, raw := range fields {
+		issue.CustomFields = append(issue.CustomFields, youtrack.CustomField{Name: name, Value: json.RawMessage(raw)})
+	}
+	return issue
+}
+
+func TestRunIssueUpdateAddRemoveField(t *testing.T) {
+	mock := &mockAPI{
+		issue:       issueWithFields(map[string]string{"Subsystem": `[{"name":"Management UI"},{"name":"Mobile"}]`}),
+		issueFields: hkSchema(),
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "HK-1", "--add-field", "subsystem=api", "--add-field", "Subsystem=Management UI", "--remove-field", "Subsystem=mobile")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertFields(t, mock.setFields, []youtrack.FieldUpdate{
+		{Type: "MultiOwnedIssueCustomField", Name: "Subsystem", Value: []any{named("Management UI"), named("API")}},
+	})
+}
+
+func TestRunIssueUpdateAddFieldErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantErr string
+	}{
+		{"single_value_field", []string{"--add-field", "Type=Bug"}, "Type takes a single value; set it with --field"},
+		{"mixed_with_set", []string{"--subsystem", "API", "--remove-field", "Subsystem=Mobile"}, "use either --field or --add-field/--remove-field"},
+		{"unknown_value", []string{"--add-field", "Subsystem=Billing"}, `Subsystem has no value "Billing"`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mock := &mockAPI{issue: issueWithFields(map[string]string{"Subsystem": `[]`}), issueFields: hkSchema()}
+			run := setupTest(t, mock)
+
+			_, err := run(append([]string{"issue", "update", "HK-1"}, tt.args...)...)
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("err = %v, want %q", err, tt.wantErr)
+			}
+			if mock.setFields != nil {
+				t.Errorf("wrote %v despite the error", mock.setFields)
+			}
+		})
+	}
+}
+
+func TestRunIssueUpdateUnassign(t *testing.T) {
+	for _, value := range []string{"unassigned", ""} {
+		t.Run(value, func(t *testing.T) {
+			mock := &mockAPI{issue: &youtrack.Issue{IDReadable: "HK-1"}, issueFields: hkSchema()}
+			run := setupTest(t, mock)
+
+			if _, err := run("issue", "update", "HK-1", "-a", value); err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			assertFields(t, mock.setFields, []youtrack.FieldUpdate{
+				{Type: "SingleUserIssueCustomField", Name: "Assignee", Value: nil},
+			})
+		})
+	}
+}
+
+func TestRunIssueUpdateFieldCommaIsOneValue(t *testing.T) {
+	mock := &mockAPI{issue: &youtrack.Issue{IDReadable: "HK-1"}, issueFields: hkSchema()}
+	run := setupTest(t, mock)
+
+	// A comma does not split values; repeat --field instead.
+	_, err := run("issue", "update", "HK-1", "--field", "Customer=LTS,VL")
+	if err == nil || !strings.Contains(err.Error(), `Customer has no value "LTS,VL"`) {
+		t.Fatalf("err = %v, want the comma kept in one value", err)
 	}
 }

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/allbin/yt/internal/youtrack"
@@ -30,39 +31,112 @@ func parseFieldArgs(raw []string) ([]fieldArg, error) {
 	return args, nil
 }
 
-// fieldUpdates resolves assignments against a field schema into REST writes.
+// fieldChanges are custom field edits from the command line: set replaces a
+// field's value, add and remove edit a multi-value field's current list.
+type fieldChanges struct {
+	set, add, remove []fieldArg
+}
+
+func (c fieldChanges) empty() bool {
+	return len(c.set) == 0 && len(c.add) == 0 && len(c.remove) == 0
+}
+
+// fieldUpdates resolves changes against a field schema into REST writes.
 // Assignments to the same field collect into one value list, so a
 // multi-value field is set by repeating it; user values resolve to logins.
-func fieldUpdates(client youtrack.API, schema []youtrack.ProjectField, args []fieldArg) ([]youtrack.FieldUpdate, error) {
+// current returns a field's present values and is only called for add and
+// remove.
+func fieldUpdates(client youtrack.API, schema []youtrack.ProjectField, changes fieldChanges, current func(field string) []string) ([]youtrack.FieldUpdate, error) {
 	var order []*youtrack.ProjectField
-	values := make(map[*youtrack.ProjectField][]string)
-	for _, a := range args {
-		f := findField(schema, a.name)
-		if f == nil {
-			return nil, fmt.Errorf("no field %q; available: %s", a.name, fieldNames(schema))
+	edits := make(map[*youtrack.ProjectField]*fieldChanges)
+	group := func(args []fieldArg, list func(*fieldChanges) *[]fieldArg) error {
+		for _, a := range args {
+			f := findField(schema, a.name)
+			if f == nil {
+				return fmt.Errorf("no field %q; available: %s", a.name, fieldNames(schema))
+			}
+			e := edits[f]
+			if e == nil {
+				e = &fieldChanges{}
+				edits[f] = e
+				order = append(order, f)
+			}
+			*list(e) = append(*list(e), a)
 		}
-		if _, seen := values[f]; !seen {
-			order = append(order, f)
-		}
-		values[f] = append(values[f], a.value)
+		return nil
+	}
+	if err := group(changes.set, func(e *fieldChanges) *[]fieldArg { return &e.set }); err != nil {
+		return nil, err
+	}
+	if err := group(changes.add, func(e *fieldChanges) *[]fieldArg { return &e.add }); err != nil {
+		return nil, err
+	}
+	if err := group(changes.remove, func(e *fieldChanges) *[]fieldArg { return &e.remove }); err != nil {
+		return nil, err
 	}
 
 	updates := make([]youtrack.FieldUpdate, 0, len(order))
 	for _, f := range order {
-		vs := values[f]
-		if f.ValueType == "user" {
-			var err error
-			if vs, err = resolveLogins(client, vs); err != nil {
-				return nil, err
-			}
+		values, err := fieldValues(client, f, edits[f], current)
+		if err != nil {
+			return nil, err
 		}
-		u, err := f.Update(vs)
+		u, err := f.Update(values)
 		if err != nil {
 			return nil, err
 		}
 		updates = append(updates, u)
 	}
 	return updates, nil
+}
+
+// fieldValues computes a field's new value list: the set values, or the
+// current values with add and remove applied, compared case-insensitively.
+func fieldValues(client youtrack.API, f *youtrack.ProjectField, e *fieldChanges, current func(string) []string) ([]string, error) {
+	if len(e.add) == 0 && len(e.remove) == 0 {
+		return userLogins(client, f, e.set)
+	}
+	if len(e.set) > 0 {
+		return nil, fmt.Errorf("%s: use either --field or --add-field/--remove-field, not both", f.Name)
+	}
+	if !f.Multi {
+		return nil, fmt.Errorf("%s takes a single value; set it with --field", f.Name)
+	}
+	add, err := userLogins(client, f, e.add)
+	if err != nil {
+		return nil, err
+	}
+	remove, err := userLogins(client, f, e.remove)
+	if err != nil {
+		return nil, err
+	}
+	contains := func(list []string, v string) bool {
+		return slices.ContainsFunc(list, func(x string) bool { return strings.EqualFold(x, v) })
+	}
+	var result []string
+	for _, v := range current(f.Name) {
+		if !contains(remove, v) {
+			result = append(result, v)
+		}
+	}
+	for _, v := range add {
+		if !contains(result, v) {
+			result = append(result, v)
+		}
+	}
+	return result, nil
+}
+
+// userLogins returns the args' values, resolved to logins on a user field.
+func userLogins(client youtrack.API, f *youtrack.ProjectField, args []fieldArg) ([]string, error) {
+	values := make([]string, len(args))
+	for i, a := range args {
+		values[i] = a.value
+	}
+	if f.ValueType != "user" {
+		return values, nil
+	}
+	return resolveLogins(client, values)
 }
 
 // resolveLogins maps user values to logins: "me" is the token's user,

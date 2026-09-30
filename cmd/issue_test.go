@@ -194,17 +194,18 @@ func TestRunIssueUpdateSummaryAndDescription(t *testing.T) {
 
 func TestRunIssueUpdateStateOnly(t *testing.T) {
 	mock := &mockAPI{
-		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+		issue:       &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+		issueFields: hkSchema(),
 	}
 	run := setupTest(t, mock)
 
-	out, err := run("issue", "update", "PROJ-123", "-s", "In Progress")
+	out, err := run("issue", "update", "PROJ-123", "-s", "in progress")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if mock.stateSet != "In Progress" {
-		t.Errorf("stateSet = %q, want %q", mock.stateSet, "In Progress")
-	}
+	assertFields(t, mock.setFields, []youtrack.FieldUpdate{
+		{Type: "StateIssueCustomField", Name: "State", Value: named("In Progress")},
+	})
 	if mock.command != "" {
 		t.Errorf("command should be empty, got %q", mock.command)
 	}
@@ -213,7 +214,7 @@ func TestRunIssueUpdateStateOnly(t *testing.T) {
 	}
 }
 
-func TestRunIssueUpdateCombinedRESTAndCommand(t *testing.T) {
+func TestRunIssueUpdateSummaryStateAndFieldsInOneWrite(t *testing.T) {
 	mock := &mockAPI{
 		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "New title"},
 	}
@@ -228,10 +229,10 @@ func TestRunIssueUpdateCombinedRESTAndCommand(t *testing.T) {
 	if mock.updatedFields["summary"] != "New title" {
 		t.Errorf("summary = %q, want %q", mock.updatedFields["summary"], "New title")
 	}
-	if mock.stateSet != "In Progress" {
-		t.Errorf("stateSet = %q, want %q", mock.stateSet, "In Progress")
+	want := []youtrack.FieldUpdate{
+		{Type: "StateIssueCustomField", Name: "State", Value: named("In Progress")},
+		{Type: "SingleUserIssueCustomField", Name: "Assignee", Value: map[string]any{"login": "jdoe"}},
 	}
-	want := []youtrack.FieldUpdate{{Type: "SingleUserIssueCustomField", Name: "Assignee", Value: map[string]any{"login": "jdoe"}}}
 	assertFields(t, mock.setFields, want)
 }
 

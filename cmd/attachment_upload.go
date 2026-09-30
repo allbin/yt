@@ -42,17 +42,21 @@ func runAttachmentUpload(cmd *cobra.Command, args []string) (err error) {
 		return err
 	}
 
-	files := make([]youtrack.UploadFile, 0, len(paths))
-	for _, p := range paths {
-		f, err := os.Open(p)
-		if err != nil {
-			return err
-		}
-		defer func() {
+	var opened []*os.File
+	defer func() {
+		for _, f := range opened {
 			if cerr := f.Close(); cerr != nil && err == nil {
 				err = cerr
 			}
-		}()
+		}
+	}()
+	files := make([]youtrack.UploadFile, 0, len(paths))
+	for _, p := range paths {
+		f, openErr := os.Open(p)
+		if openErr != nil {
+			return openErr
+		}
+		opened = append(opened, f)
 		files = append(files, youtrack.UploadFile{Name: filepath.Base(p), Content: f})
 	}
 

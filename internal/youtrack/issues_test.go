@@ -26,7 +26,7 @@ func TestUpdateIssueFields(t *testing.T) {
 	err := client.UpdateIssueFields("TEST-1", map[string]string{
 		"summary":     "New title",
 		"description": "New body",
-	})
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func TestUpdateIssueFieldsSummaryOnly(t *testing.T) {
 	defer srv.Close()
 
 	client := NewClient(srv.URL, "token")
-	err := client.UpdateIssueFields("TEST-1", map[string]string{"summary": "Only summary"})
+	err := client.UpdateIssueFields("TEST-1", map[string]string{"summary": "Only summary"}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestUpdateIssueFieldsError(t *testing.T) {
 	defer srv.Close()
 
 	client := NewClient(srv.URL, "token")
-	err := client.UpdateIssueFields("NOPE-1", map[string]string{"summary": "x"})
+	err := client.UpdateIssueFields("NOPE-1", map[string]string{"summary": "x"}, nil)
 	if err == nil {
 		t.Fatal("expected error for 404")
 	}
