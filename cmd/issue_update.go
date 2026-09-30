@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/allbin/yt/internal/format"
+	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
 )
 
@@ -28,10 +28,15 @@ var updateCmd = &cobra.Command{
 	Short: "Update a YouTrack issue",
 	Long: `Update fields on a YouTrack issue.
 
-Summary, description, and state use the REST API; other fields use the command API.
-Both can be combined in a single invocation.
+Use --field to set any custom field by name, as "Name=Value". Values with
+spaces need no escaping beyond shell quoting. Repeat --field with the same name
+to set several values on a multi-value field; the list replaces the current
+values. An empty value clears the field. Values are checked against the
+field's allowed values before anything is written; "yt project fields PROJ"
+lists them.
 
-Use --field to set arbitrary custom fields by name.
+--assignee, --priority, --type and --subsystem are shorthands for --field on
+those fields. Assignee accepts "me", a login or a name.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -54,8 +59,17 @@ After a successful update the issue is fetched and displayed.`,
   # set type
   yt issue update PROJ-123 -t Bug
 
+  # set a multi-word value
+  yt issue update PROJ-123 -t "User Story"
+
   # set subsystem
-  yt issue update PROJ-123 --subsystem API
+  yt issue update PROJ-123 --subsystem "Management UI"
+
+  # set several values on a multi-value field
+  yt issue update PROJ-123 --field "Subsystem=API" --field "Subsystem=Management UI"
+
+  # clear a field
+  yt issue update PROJ-123 --field "Subsystem="
 
   # set arbitrary custom field
   yt issue update PROJ-123 --field "Severity=Critical"
@@ -89,7 +103,7 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateDescription, "description", "d", "", "set issue description")
 	updateCmd.Flags().StringSliceVar(&updateTags, "tag", nil, "add tag (repeatable)")
 	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
-	updateCmd.Flags().StringSliceVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
+	updateCmd.Flags().StringArrayVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringVar(&updateBoard, "board", "", "add the issue to this agile board")
 	updateCmd.Flags().StringVar(&updateSprint, "sprint", "", "sprint for --board (default: current)")
 
@@ -121,29 +135,36 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		restFields["description"] = description
 	}
 
-	// REST API: state (uses SetIssueState for reliable field-level update)
 	stateChanged := cmd.Flags().Changed("state")
 
-	// Command API: assignee, priority, type, subsystem, tags, fields
-	assignee, err := resolveAssignee(client, updateAssignee)
+	rawFields, err := parseFieldArgs(updateFields)
 	if err != nil {
 		return err
 	}
+	fieldArgs := append(flagFieldArgs(cmd.Flags(),
+		[2]string{"assignee", "Assignee"},
+		[2]string{"priority", "Priority"},
+		[2]string{"type", "Type"},
+		[2]string{"subsystem", "Subsystem"},
+	), rawFields...)
 
-	fields := updateFields
-	if cmd.Flags().Changed("subsystem") {
-		fields = append(fields, "Subsystem="+updateSubsystem)
-	}
-
-	command, err := buildCommand("", assignee, updatePriority, updateType, updateTags, updateRemoveTags, fields)
-	if err != nil {
-		return err
-	}
-
+	command := tagCommand(updateTags, updateRemoveTags)
 	boardChanged := cmd.Flags().Changed("board")
 
-	if len(restFields) == 0 && !stateChanged && command == "" && !boardChanged {
+	if len(restFields) == 0 && !stateChanged && len(fieldArgs) == 0 && command == "" && !boardChanged {
 		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --tag, --field, --remove-tag, or --board")
+	}
+
+	// Resolved before any write, so a bad value changes nothing.
+	var updates []youtrack.FieldUpdate
+	if len(fieldArgs) > 0 {
+		schema, err := client.ListIssueFields(id)
+		if err != nil {
+			return err
+		}
+		if updates, err = fieldUpdates(client, schema, fieldArgs); err != nil {
+			return err
+		}
 	}
 
 	if len(restFields) > 0 {
@@ -154,6 +175,12 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 
 	if stateChanged {
 		if err := client.SetIssueState(id, updateState); err != nil {
+			return err
+		}
+	}
+
+	if len(updates) > 0 {
+		if err := client.SetIssueFields(id, updates); err != nil {
 			return err
 		}
 	}
@@ -186,52 +213,4 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return format.JSON(w, issue)
 	}
 	return format.Issue(w, issue)
-}
-
-// buildCommand constructs a YouTrack command string from field values.
-// Multi-word values are wrapped in braces.
-func buildCommand(state, assignee, priority, typ string, tags, removeTags, fields []string) (string, error) {
-	var parts []string
-	if state != "" {
-		parts = append(parts, "State "+braceWrap(state))
-	}
-	if assignee != "" {
-		parts = append(parts, "Assignee "+braceWrap(assignee))
-	}
-	if priority != "" {
-		parts = append(parts, "Priority "+braceWrap(priority))
-	}
-	if typ != "" {
-		parts = append(parts, "Type "+braceWrap(typ))
-	}
-	for _, f := range fields {
-		name, value, ok := strings.Cut(f, "=")
-		if !ok {
-			return "", fmt.Errorf("invalid --field format %q: expected Name=Value", f)
-		}
-		name = strings.TrimSpace(name)
-		value = strings.TrimSpace(value)
-		if name == "" {
-			return "", fmt.Errorf("invalid --field format %q: name must be non-empty", f)
-		}
-		parts = append(parts, braceWrap(name)+" "+braceWrap(value))
-	}
-	// Tag names stay bare: YouTrack keeps braces as part of a new tag's name
-	// and rejects them on untag, while a bare multi-word name parses up to
-	// the next keyword. Tags go last so nothing follows the final name.
-	for _, t := range tags {
-		parts = append(parts, "tag "+t)
-	}
-	for _, t := range removeTags {
-		parts = append(parts, "untag "+t)
-	}
-	return strings.Join(parts, " "), nil
-}
-
-// braceWrap wraps s in braces if it contains spaces.
-func braceWrap(s string) string {
-	if strings.Contains(s, " ") {
-		return "{" + s + "}"
-	}
-	return s
 }

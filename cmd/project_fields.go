@@ -12,7 +12,9 @@ var projectFieldsCmd = &cobra.Command{
 their types and allowed values.
 
 Useful for discovering which fields can be set with --field or --subsystem
-on issue create and update commands.`,
+on issue create and update commands. A type ending in [] takes several values.
+
+Use "yt project fields add" to add a value to a field.`,
 	Example: `  # list fields for a project
   yt project fields PROJ
 

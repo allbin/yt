@@ -35,6 +35,13 @@ type mockAPI struct {
 	issueBoards    []youtrack.BoardMembership
 	sprintErr      error
 
+	issueFields   []youtrack.ProjectField
+	setFields     []youtrack.FieldUpdate
+	addedBundle   []string // "field|value"
+	uploaded      []string // file names
+	createdFields []youtrack.FieldUpdate
+	createCalled  bool
+
 	createdDescription string
 	addedComment       string
 }
@@ -63,8 +70,10 @@ func (m *mockAPI) AddComment(_ string, text string) (*youtrack.Comment, error) {
 	m.addedComment = text
 	return &youtrack.Comment{ID: "mock-comment-1", Text: "mock"}, nil
 }
-func (m *mockAPI) CreateIssue(_, summary, description string) (*youtrack.Issue, error) {
+func (m *mockAPI) CreateIssue(_, summary, description string, fields []youtrack.FieldUpdate) (*youtrack.Issue, error) {
+	m.createCalled = true
 	m.createdDescription = description
+	m.createdFields = fields
 	return &youtrack.Issue{IDReadable: "PROJ-999", Summary: summary}, nil
 }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) {
@@ -113,4 +122,23 @@ func (m *mockAPI) CreateLink(source, phrase, target string) error {
 func (m *mockAPI) RemoveLink(source, linkID, target string) error {
 	m.removedLinks = append(m.removedLinks, source+"|"+linkID+"|"+target)
 	return m.linkErr
+}
+func (m *mockAPI) ListIssueFields(string) ([]youtrack.ProjectField, error) {
+	return m.issueFields, nil
+}
+func (m *mockAPI) SetIssueFields(_ string, fields []youtrack.FieldUpdate) error {
+	m.setFields = fields
+	return m.updateErr
+}
+func (m *mockAPI) AddBundleValue(f youtrack.ProjectField, name string) error {
+	m.addedBundle = append(m.addedBundle, f.Name+"|"+name)
+	return m.updateErr
+}
+func (m *mockAPI) UploadAttachments(_ string, files []youtrack.UploadFile) ([]youtrack.Attachment, error) {
+	var out []youtrack.Attachment
+	for _, f := range files {
+		m.uploaded = append(m.uploaded, f.Name)
+		out = append(out, youtrack.Attachment{Name: f.Name})
+	}
+	return out, nil
 }

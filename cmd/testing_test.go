@@ -20,6 +20,10 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		createSummary = ""
 		createDescription = ""
 		createSubsystem = ""
+		createType = ""
+		createPriority = ""
+		createAssignee = ""
+		createLinks = nil
 		createTags = nil
 		createFields = nil
 		createBoard = ""

@@ -6,10 +6,15 @@ Update a YouTrack issue
 
 Update fields on a YouTrack issue.
 
-Summary, description, and state use the REST API; other fields use the command API.
-Both can be combined in a single invocation.
+Use --field to set any custom field by name, as "Name=Value". Values with
+spaces need no escaping beyond shell quoting. Repeat --field with the same name
+to set several values on a multi-value field; the list replaces the current
+values. An empty value clears the field. Values are checked against the
+field's allowed values before anything is written; "yt project fields PROJ"
+lists them.
 
-Use --field to set arbitrary custom fields by name.
+--assignee, --priority, --type and --subsystem are shorthands for --field on
+those fields. Assignee accepts "me", a login or a name.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -40,8 +45,17 @@ yt issue update <id> [flags]
   # set type
   yt issue update PROJ-123 -t Bug
 
+  # set a multi-word value
+  yt issue update PROJ-123 -t "User Story"
+
   # set subsystem
-  yt issue update PROJ-123 --subsystem API
+  yt issue update PROJ-123 --subsystem "Management UI"
+
+  # set several values on a multi-value field
+  yt issue update PROJ-123 --field "Subsystem=API" --field "Subsystem=Management UI"
+
+  # clear a field
+  yt issue update PROJ-123 --field "Subsystem="
 
   # set arbitrary custom field
   yt issue update PROJ-123 --field "Severity=Critical"
@@ -68,7 +82,7 @@ yt issue update <id> [flags]
   -a, --assignee string      set assignee (supports 'me')
       --board string         add the issue to this agile board
   -d, --description string   set issue description
-      --field strings        set custom field as "Name=Value" (repeatable)
+      --field stringArray    set custom field as "Name=Value" (repeatable)
   -h, --help                 help for update
   -p, --priority string      set priority
       --remove-tag strings   remove tag (repeatable)

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
+	"strings"
 )
 
 // BundleValue represents a single value in a custom field bundle.
@@ -33,15 +34,27 @@ func (c *Client) GetFieldValues(issueID, fieldName string) ([]BundleValue, error
 type ProjectField struct {
 	Name   string        `json:"name"`
 	Type   string        `json:"type,omitempty"`
+	Bundle string        `json:"bundle,omitempty"`
 	Values []BundleValue `json:"values,omitempty"`
+
+	// ValueType is the field type without its cardinality, e.g. "enum",
+	// "ownedField", "user", "date and time".
+	ValueType string `json:"-"`
+	Multi     bool   `json:"-"`
+	// BundleID and BundleType ("EnumBundle", "OwnedBundle", ...) address the
+	// bundle for admin writes.
+	BundleID   string `json:"-"`
+	BundleType string `json:"-"`
 }
 
-const projectBundleFields = "field(name,fieldType($type)),bundle(values(name,ordinal))"
+// projectFieldSchema selects a project custom field's schema. The same shape
+// is served by a project's field list and by an issue's projectCustomField.
+const projectFieldSchema = "field(name,fieldType(id,isMultiValue)),bundle($type,id,name,values(name,ordinal))"
 
 // ListProjectFields returns all custom fields for a project with their
 // allowed values.
 func (c *Client) ListProjectFields(projectID string) ([]ProjectField, error) {
-	params := url.Values{"fields": {projectBundleFields}}
+	params := url.Values{"fields": {projectFieldSchema}}
 
 	path := "/api/admin/projects/" + url.PathEscape(projectID) + "/customFields"
 	data, err := c.get(path, params)
@@ -49,7 +62,34 @@ func (c *Client) ListProjectFields(projectID string) ([]ProjectField, error) {
 		return nil, fmt.Errorf("fetch fields for project %s: %w", projectID, err)
 	}
 
-	return parseProjectFields(data, projectID)
+	var raw []rawProjectField
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse fields for project %s: %w", projectID, err)
+	}
+	return toProjectFields(raw), nil
+}
+
+// ListIssueFields returns the schema of every custom field on an issue, as
+// configured on its project.
+func (c *Client) ListIssueFields(issueID string) ([]ProjectField, error) {
+	params := url.Values{"fields": {"projectCustomField(" + projectFieldSchema + ")"}}
+
+	data, err := c.get("/api/issues/"+url.PathEscape(issueID)+"/customFields", params)
+	if err != nil {
+		return nil, fmt.Errorf("fetch fields for %s: %w", issueID, err)
+	}
+
+	var raw []struct {
+		ProjectCustomField rawProjectField `json:"projectCustomField"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, fmt.Errorf("parse fields for %s: %w", issueID, err)
+	}
+	fields := make([]rawProjectField, len(raw))
+	for i, r := range raw {
+		fields[i] = r.ProjectCustomField
+	}
+	return toProjectFields(fields), nil
 }
 
 // GetProjectFieldValues returns the allowed bundle values for a named custom
@@ -67,76 +107,59 @@ func (c *Client) GetProjectFieldValues(projectID, fieldName string) ([]BundleVal
 	return nil, nil
 }
 
-func parseProjectFields(data []byte, context string) ([]ProjectField, error) {
-	var raw []struct {
-		Field *struct {
-			Name      string  `json:"name"`
-			FieldType *struct {
-				Type string `json:"$type"`
-			} `json:"fieldType"`
-		} `json:"field"`
-		Bundle *struct {
-			Values []BundleValue `json:"values"`
-		} `json:"bundle"`
-	}
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return nil, fmt.Errorf("parse fields for project %s: %w", context, err)
-	}
+type rawProjectField struct {
+	Field *struct {
+		Name      string `json:"name"`
+		FieldType *struct {
+			ID           string `json:"id"`
+			IsMultiValue bool   `json:"isMultiValue"`
+		} `json:"fieldType"`
+	} `json:"field"`
+	Bundle *struct {
+		Type   string        `json:"$type"`
+		ID     string        `json:"id"`
+		Name   string        `json:"name"`
+		Values []BundleValue `json:"values"`
+	} `json:"bundle"`
+}
 
+func toProjectFields(raw []rawProjectField) []ProjectField {
 	var result []ProjectField
 	for _, r := range raw {
 		if r.Field == nil {
 			continue
 		}
 		pf := ProjectField{Name: r.Field.Name}
-		if r.Field.FieldType != nil {
-			pf.Type = friendlyFieldType(r.Field.FieldType.Type)
+		if ft := r.Field.FieldType; ft != nil {
+			pf.ValueType = strings.TrimSuffix(strings.TrimSuffix(ft.ID, "[1]"), "[*]")
+			pf.Multi = ft.IsMultiValue
+			pf.Type = friendlyFieldType(pf.ValueType, pf.Multi)
 		}
-		if r.Bundle != nil {
-			pf.Values = r.Bundle.Values
+		if b := r.Bundle; b != nil {
+			pf.Bundle = b.Name
+			pf.BundleID = b.ID
+			pf.BundleType = b.Type
+			pf.Values = b.Values
 			sort.Slice(pf.Values, func(i, j int) bool {
 				return pf.Values[i].Ordinal < pf.Values[j].Ordinal
 			})
 		}
 		result = append(result, pf)
 	}
-	return result, nil
+	return result
 }
 
-// friendlyFieldType maps YouTrack $type values to short human-readable names.
-func friendlyFieldType(t string) string {
-	switch t {
-	case "StateIssueCustomField", "StateBundleCustomFieldDefaults":
-		return "state"
-	case "EnumBundleCustomFieldDefaults", "SingleEnumIssueCustomField":
-		return "enum"
-	case "OwnedBundleCustomFieldDefaults", "SingleOwnedIssueCustomField":
-		return "owned"
-	case "VersionBundleCustomFieldDefaults", "SingleVersionIssueCustomField":
-		return "version"
-	case "UserCustomFieldDefaults", "SingleUserIssueCustomField":
-		return "user"
-	case "BuildBundleCustomFieldDefaults", "SingleBuildIssueCustomField":
-		return "build"
-	case "PeriodIssueCustomField":
-		return "period"
-	case "DateIssueCustomField":
-		return "date"
-	case "TextIssueCustomField":
-		return "text"
-	case "SimpleIssueCustomField":
-		return "simple"
-	case "MultiBundleCustomFieldDefaults", "MultiEnumIssueCustomField":
-		return "enum[]"
-	case "MultiOwnedIssueCustomField":
-		return "owned[]"
-	case "MultiVersionIssueCustomField":
-		return "version[]"
-	case "MultiUserIssueCustomField":
-		return "user[]"
-	default:
-		return t
+// friendlyFieldType names a field type for display: "owned" for ownedField,
+// with "[]" marking a multi-value field.
+func friendlyFieldType(valueType string, multi bool) string {
+	t := valueType
+	if t == "ownedField" {
+		t = "owned"
 	}
+	if multi {
+		t += "[]"
+	}
+	return t
 }
 
 // ListFieldNames returns the names of all custom fields on the given issue.

@@ -64,17 +64,19 @@ func (c *Client) UpdateIssueFields(id string, fields map[string]string) error {
 	return nil
 }
 
-// CreateIssue creates an issue with only its core fields. Tags and custom
-// fields go through the command API afterwards: the REST create body cannot
-// reference a tag by name.
-func (c *Client) CreateIssue(project, summary, description string) (*Issue, error) {
+// CreateIssue creates an issue with its core and custom fields in one
+// request, so a rejected field value creates nothing. Tags go through the
+// command API afterwards: the REST create body cannot reference a tag by name.
+func (c *Client) CreateIssue(project, summary, description string, fields []FieldUpdate) (*Issue, error) {
 	body := struct {
-		Project     struct{ ShortName string `json:"shortName"` } `json:"project"`
-		Summary     string                                        `json:"summary"`
-		Description string                                        `json:"description,omitempty"`
+		Project      struct{ ShortName string `json:"shortName"` } `json:"project"`
+		Summary      string                                        `json:"summary"`
+		Description  string                                        `json:"description,omitempty"`
+		CustomFields []FieldUpdate                                 `json:"customFields,omitempty"`
 	}{
-		Summary:     summary,
-		Description: description,
+		Summary:      summary,
+		Description:  description,
+		CustomFields: fields,
 	}
 	body.Project.ShortName = project
 

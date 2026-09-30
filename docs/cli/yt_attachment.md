@@ -4,7 +4,7 @@ Manage issue attachments
 
 ### Synopsis
 
-Download and manage attachments on YouTrack issues.
+Upload and download attachments on YouTrack issues.
 
 ### Options
 
@@ -22,4 +22,5 @@ Download and manage attachments on YouTrack issues.
 
 * [yt](yt.md)	 - YouTrack CLI
 * [yt attachment download](yt_attachment_download.md)	 - Download an attachment from an issue
+* [yt attachment upload](yt_attachment_upload.md)	 - Attach files to an issue
 

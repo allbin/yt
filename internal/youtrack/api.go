@@ -16,13 +16,16 @@ type API interface {
 	UpdateIssueFields(id string, fields map[string]string) error
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
-	CreateIssue(project, summary, description string) (*Issue, error)
+	CreateIssue(project, summary, description string, fields []FieldUpdate) (*Issue, error)
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
 	GetFieldValues(issueID, fieldName string) ([]BundleValue, error)
 	GetProjectFieldValues(projectID, fieldName string) ([]BundleValue, error)
 	ListProjectFields(projectID string) ([]ProjectField, error)
 	ListFieldNames(issueID string) ([]string, error)
+	ListIssueFields(issueID string) ([]ProjectField, error)
+	SetIssueFields(issueID string, fields []FieldUpdate) error
+	AddBundleValue(field ProjectField, name string) error
 	GetSprintBoard(boardID, sprintID string) (*SprintBoard, error)
 	ListSprintIssues(agileID, sprintID string) ([]string, error)
 	AddIssueToSprint(agileID, sprintID, idReadable string) error
@@ -30,6 +33,7 @@ type API interface {
 	IssueBoards(issueID string) ([]BoardMembership, error)
 	ListAttachments(issueID string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error
+	UploadAttachments(issueID string, files []UploadFile) ([]Attachment, error)
 	ListLinkTypes() ([]LinkType, error)
 	CreateLink(sourceID, phrase, targetID string) error
 	RemoveLink(sourceID, linkID, targetID string) error

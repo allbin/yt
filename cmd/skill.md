@@ -1,6 +1,6 @@
 ---
 name: yt
-description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, download an attachment, or branch from an issue."
+description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, upload or download an attachment, add a value to a project field, or branch from an issue."
 allowed-tools: Bash(yt *)
 ---
 
@@ -72,12 +72,28 @@ Before setting `--subsystem`, `--state`, `--priority`, `--type`, or any
 yt project fields PROJ --json
 ```
 
+Field values are checked against that list before anything is written, and a
+typo errors with the allowed values. Quote multi-word values
+(`--field "Type=User Story"`); no braces. On a multi-value field (`owned[]`,
+`enum[]`), repeat `--field` with the same name to set several values — the list
+replaces the current values, so include the ones to keep. `--field "Name="`
+clears a field. On `create`, `-t` is `--tag`; the type is `--type`.
+
+A value missing from a field's bundle must be added before it can be set.
+Bundles are often shared across projects and need admin rights, so ask before
+adding:
+
+```bash
+yt project fields add PROJ Customer LTVB
+```
+
 Tags are the exception — YouTrack creates them on demand, so `--tag` on both
 `create` and `update` accepts a tag that does not exist yet.
 
-If `create` prints an issue but exits non-zero, the issue exists and only a
-follow-up step (fields, tags, parent link, board) failed. Finish it with
-`yt issue update <ID>`; running `create` again makes a duplicate.
+Custom fields go with the create request itself, so a bad value creates
+nothing. If `create` prints an issue but exits non-zero, the issue exists and
+only a follow-up step (tags, links, board) failed. Finish it with
+`yt issue update <ID>` or `yt link`; running `create` again makes a duplicate.
 
 For long or multi-line text, `-d/--description` and `-m/--message` accept `@path`
 to read a file and `-` to read stdin, which avoids shell mangling:
@@ -94,7 +110,8 @@ yt issue create -p AX -s "Subtask summary" --parent AX-332 --json
 ```
 
 `--parent` adds the `subtask of` link *and* places the issue on the parent's
-board and sprint. `--like <ID>` mirrors another issue's board and sprint without
+board and sprint. Other links can be added on creation with repeatable
+`--link relation=ID` (e.g. `--link depends-on=AX-12`). `--like <ID>` mirrors another issue's board and sprint without
 linking. Both are overridden by an explicit `--board`/`--sprint`.
 
 `yt issue state` and `yt issue view` open an interactive picker and viewer for a
@@ -124,11 +141,15 @@ The relation accepts kebab, spaced, or squashed forms (`subtask-of`,
 
 ## Attachments
 
-`yt issue <ID> --json` lists attachments with name and size. Fetch one by name:
+`yt issue <ID> --json` lists attachments with name and size. Fetch one by name,
+or attach local files:
 
 ```bash
 yt attachment download <ID> <filename> [--output /tmp/file.csv]
+yt attachment upload <ID> <file>... [--json]
 ```
+
+An uploaded image can be shown in a description or comment as `![](name.png)`.
 
 ## Git branches
 

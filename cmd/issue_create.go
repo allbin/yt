@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/allbin/yt/internal/format"
 	"github.com/allbin/yt/internal/youtrack"
@@ -14,6 +15,10 @@ var (
 	createSummary     string
 	createDescription string
 	createSubsystem   string
+	createType        string
+	createPriority    string
+	createAssignee    string
+	createLinks       []string
 	createTags        []string
 	createFields      []string
 	createBoard       string
@@ -30,12 +35,19 @@ short name and summary. Optionally accepts a description.
 
 The created issue is displayed after creation.
 
-Use --subsystem or --field to set custom fields on the new issue, and --tag
-to tag it; a tag that does not exist yet is created.
+Use --field "Name=Value" to set any custom field; --type, --priority,
+--assignee and --subsystem are shorthands for those fields. Repeat --field
+with the same name to set several values on a multi-value field. Values are
+checked against the project's allowed values ("yt project fields PROJ") and
+sent with the create request, so a bad value creates nothing.
 
-Fields, tags, the parent link and board placement are applied after the issue
-exists. If one of them fails, the created issue is still printed and the error
-names its ID: finish it with "yt issue update" rather than creating it again.
+Use --tag to tag the issue; a tag that does not exist yet is created. Use
+--link "relation=ID" to link it to other issues ("yt link types" lists the
+relations).
+
+Tags, links and board placement are applied after the issue exists. If one of
+them fails, the created issue is still printed and the error names its ID:
+finish it with "yt issue update" or "yt link" rather than creating it again.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -59,11 +71,17 @@ workflow. When --board is also given it overrides the parent's board.`,
   # read the description from stdin
   cat notes.md | yt issue create -p PROJ -s "Big writeup" -d -
 
-  # create with subsystem
-  yt issue create -p PROJ -s "Fix API auth" --subsystem API
+  # set type and subsystem (quote multi-word values)
+  yt issue create -p PROJ -s "Fix API auth" --type "User Story" --subsystem "Management UI"
 
   # create with custom field
   yt issue create -p PROJ -s "Critical outage" --field "Severity=Critical"
+
+  # several values on a multi-value field
+  yt issue create -p PROJ -s "Shared fix" --field "Subsystem=API" --field "Subsystem=Management UI"
+
+  # link to other issues on creation
+  yt issue create -p PROJ -s "Follow-up" --link depends-on=PROJ-12 --link relates=PROJ-7
 
   # create with tags
   yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
@@ -88,8 +106,12 @@ func init() {
 	createCmd.Flags().StringVarP(&createSummary, "summary", "s", "", "issue summary (required)")
 	createCmd.Flags().StringVarP(&createDescription, "description", "d", "", "issue description (@file or - for stdin)")
 	createCmd.Flags().StringVar(&createSubsystem, "subsystem", "", "set subsystem")
+	createCmd.Flags().StringVar(&createType, "type", "", "set issue type")
+	createCmd.Flags().StringVar(&createPriority, "priority", "", "set priority")
+	createCmd.Flags().StringVar(&createAssignee, "assignee", "", "set assignee (supports 'me')")
 	createCmd.Flags().StringSliceVarP(&createTags, "tag", "t", nil, "add tag (repeatable)")
-	createCmd.Flags().StringSliceVar(&createFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
+	createCmd.Flags().StringArrayVar(&createFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
+	createCmd.Flags().StringArrayVar(&createLinks, "link", nil, `link to an issue as "relation=ID", e.g. depends-on=AX-3 (repeatable)`)
 	createCmd.Flags().StringVar(&createBoard, "board", "", "add the issue to this agile board")
 	createCmd.Flags().StringVar(&createSprint, "sprint", "", "sprint for --board (default: current)")
 	createCmd.Flags().StringVar(&createLike, "like", "", "mirror another issue's board and sprint")
@@ -99,6 +121,8 @@ func init() {
 	_ = createCmd.MarkFlagRequired("summary")
 
 	_ = createCmd.RegisterFlagCompletionFunc("subsystem", completeProjectFieldValues("Subsystem"))
+	_ = createCmd.RegisterFlagCompletionFunc("type", completeProjectFieldValues("Type"))
+	_ = createCmd.RegisterFlagCompletionFunc("priority", completeProjectFieldValues("Priority"))
 	_ = createCmd.RegisterFlagCompletionFunc("field", completeFieldFlag(false))
 }
 
@@ -113,18 +137,19 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fields := createFields
-	if cmd.Flags().Changed("subsystem") {
-		fields = append(fields, "Subsystem="+createSubsystem)
-	}
-
-	// Built before creating, so a malformed --field leaves no orphan issue.
-	command, err := buildCommand("", "", "", "", createTags, nil, fields)
+	// Everything that can be checked is resolved before creating, so a bad
+	// field value or relation leaves no orphan issue.
+	updates, err := createFieldUpdates(cmd, client)
 	if err != nil {
 		return err
 	}
+	links, err := resolveLinkArgs(client, createLinks)
+	if err != nil {
+		return err
+	}
+	command := tagCommand(createTags, nil)
 
-	issue, err := client.CreateIssue(createProject, createSummary, description)
+	issue, err := client.CreateIssue(createProject, createSummary, description, updates)
 	if err != nil {
 		return err
 	}
@@ -132,7 +157,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	// From here on the issue exists. A failed step still prints it and names
 	// its ID, so the caller finishes it with update instead of creating a
 	// duplicate.
-	issue, stepErr := completeCreate(client, issue, command)
+	issue, stepErr := completeCreate(client, issue, command, links)
 
 	w := cmd.OutOrStdout()
 	if jsonOutput {
@@ -150,13 +175,60 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// completeCreate applies fields, tags, the parent link and board placement to
-// a newly created issue. It always returns the best-known state of the issue,
-// alongside the first step that failed.
-func completeCreate(client youtrack.API, created *youtrack.Issue, command string) (*youtrack.Issue, error) {
+// createFieldUpdates resolves --field and the field shorthands against the
+// project's fields.
+func createFieldUpdates(cmd *cobra.Command, client youtrack.API) ([]youtrack.FieldUpdate, error) {
+	rawFields, err := parseFieldArgs(createFields)
+	if err != nil {
+		return nil, err
+	}
+	args := append(flagFieldArgs(cmd.Flags(),
+		[2]string{"type", "Type"},
+		[2]string{"priority", "Priority"},
+		[2]string{"assignee", "Assignee"},
+		[2]string{"subsystem", "Subsystem"},
+	), rawFields...)
+	if len(args) == 0 {
+		return nil, nil
+	}
+	schema, err := client.ListProjectFields(createProject)
+	if err != nil {
+		return nil, err
+	}
+	return fieldUpdates(client, schema, args)
+}
+
+// linkArg is a resolved --link: the relation phrase and its target.
+type linkArg struct {
+	phrase, target string
+}
+
+// resolveLinkArgs parses "relation=ID" values and resolves each relation
+// against the instance's link types.
+func resolveLinkArgs(client youtrack.API, raw []string) ([]linkArg, error) {
+	links := make([]linkArg, 0, len(raw))
+	for _, l := range raw {
+		alias, target, ok := strings.Cut(l, "=")
+		alias, target = strings.TrimSpace(alias), strings.TrimSpace(target)
+		if !ok || alias == "" || target == "" {
+			return nil, fmt.Errorf("invalid --link %q: expected relation=ID, e.g. depends-on=AX-3", l)
+		}
+		rel, err := resolveRelation(client, alias)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, linkArg{phrase: rel.Phrase, target: target})
+	}
+	return links, nil
+}
+
+// completeCreate applies tags, links and board placement to a newly created
+// issue. It always returns the best-known state of the issue, alongside the
+// first step that failed.
+func completeCreate(client youtrack.API, created *youtrack.Issue, command string, links []linkArg) (*youtrack.Issue, error) {
 	id := created.IDReadable
-	placed, err := applyCreateSteps(client, id, command)
-	if command == "" && !placed && createParent == "" && err == nil {
+	placed, err := applyCreateSteps(client, id, command, links)
+	if command == "" && !placed && createParent == "" && len(links) == 0 && err == nil {
 		return created, nil
 	}
 
@@ -175,10 +247,15 @@ func completeCreate(client youtrack.API, created *youtrack.Issue, command string
 
 // applyCreateSteps runs the post-create steps in order, stopping at the first
 // failure. placed reports whether the issue landed on a board.
-func applyCreateSteps(client youtrack.API, id, command string) (placed bool, err error) {
+func applyCreateSteps(client youtrack.API, id, command string, links []linkArg) (placed bool, err error) {
 	if command != "" {
 		if err := client.UpdateIssue(id, command); err != nil {
-			return false, fmt.Errorf("set fields and tags: %w", err)
+			return false, fmt.Errorf("add tags: %w", err)
+		}
+	}
+	for _, l := range links {
+		if err := client.CreateLink(id, l.phrase, l.target); err != nil {
+			return false, fmt.Errorf("link %s %s: %w", l.phrase, l.target, err)
 		}
 	}
 

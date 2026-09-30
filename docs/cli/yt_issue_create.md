@@ -9,12 +9,19 @@ short name and summary. Optionally accepts a description.
 
 The created issue is displayed after creation.
 
-Use --subsystem or --field to set custom fields on the new issue, and --tag
-to tag it; a tag that does not exist yet is created.
+Use --field "Name=Value" to set any custom field; --type, --priority,
+--assignee and --subsystem are shorthands for those fields. Repeat --field
+with the same name to set several values on a multi-value field. Values are
+checked against the project's allowed values ("yt project fields PROJ") and
+sent with the create request, so a bad value creates nothing.
 
-Fields, tags, the parent link and board placement are applied after the issue
-exists. If one of them fails, the created issue is still printed and the error
-names its ID: finish it with "yt issue update" rather than creating it again.
+Use --tag to tag the issue; a tag that does not exist yet is created. Use
+--link "relation=ID" to link it to other issues ("yt link types" lists the
+relations).
+
+Tags, links and board placement are applied after the issue exists. If one of
+them fails, the created issue is still printed and the error names its ID:
+finish it with "yt issue update" or "yt link" rather than creating it again.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -46,11 +53,17 @@ yt issue create [flags]
   # read the description from stdin
   cat notes.md | yt issue create -p PROJ -s "Big writeup" -d -
 
-  # create with subsystem
-  yt issue create -p PROJ -s "Fix API auth" --subsystem API
+  # set type and subsystem (quote multi-word values)
+  yt issue create -p PROJ -s "Fix API auth" --type "User Story" --subsystem "Management UI"
 
   # create with custom field
   yt issue create -p PROJ -s "Critical outage" --field "Severity=Critical"
+
+  # several values on a multi-value field
+  yt issue create -p PROJ -s "Shared fix" --field "Subsystem=API" --field "Subsystem=Management UI"
+
+  # link to other issues on creation
+  yt issue create -p PROJ -s "Follow-up" --link depends-on=PROJ-12 --link relates=PROJ-7
 
   # create with tags
   yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
@@ -71,17 +84,21 @@ yt issue create [flags]
 ### Options
 
 ```
+      --assignee string      set assignee (supports 'me')
       --board string         add the issue to this agile board
   -d, --description string   issue description (@file or - for stdin)
-      --field strings        set custom field as "Name=Value" (repeatable)
+      --field stringArray    set custom field as "Name=Value" (repeatable)
   -h, --help                 help for create
       --like string          mirror another issue's board and sprint
+      --link stringArray     link to an issue as "relation=ID", e.g. depends-on=AX-3 (repeatable)
       --parent string        make the issue a subtask of this issue and share its board
+      --priority string      set priority
   -p, --project string       project short name (required)
       --sprint string        sprint for --board (default: current)
       --subsystem string     set subsystem
   -s, --summary string       issue summary (required)
   -t, --tag strings          add tag (repeatable)
+      --type string          set issue type
 ```
 
 ### Options inherited from parent commands

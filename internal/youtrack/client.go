@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -178,5 +179,51 @@ func (c *Client) postJSON(path string, body any) (data []byte, err error) {
 		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 	}
 
+	return respBody, nil
+}
+
+// postMultipart posts files as a multipart form under the "file" field and
+// returns the response body.
+func (c *Client) postMultipart(path string, files []UploadFile) (data []byte, err error) {
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	for _, f := range files {
+		part, err := mw.CreateFormFile("file", f.Name)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := io.Copy(part, f.Content); err != nil {
+			return nil, fmt.Errorf("read %s: %w", f.Name, err)
+		}
+	}
+	if err := mw.Close(); err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", c.baseURL+path, &buf)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if cerr := resp.Body.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		return nil, &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
+	}
 	return respBody, nil
 }

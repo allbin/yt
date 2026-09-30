@@ -29,7 +29,7 @@ func (m *mockAPI) UpdateIssue(string, string) error                     { return
 func (m *mockAPI) UpdateIssueFields(string, map[string]string) error    { return nil }
 func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)      { return nil, nil }
 func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error) { return nil, nil }
-func (m *mockAPI) CreateIssue(string, string, string) (*youtrack.Issue, error) {
+func (m *mockAPI) CreateIssue(string, string, string, []youtrack.FieldUpdate) (*youtrack.Issue, error) {
 	return nil, nil
 }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) { return nil, nil }
@@ -51,6 +51,12 @@ func (m *mockAPI) GetProjectFieldValues(string, string) ([]youtrack.BundleValue,
 }
 func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error) { return nil, nil }
 func (m *mockAPI) ListFieldNames(string) ([]string, error)                   { return nil, nil }
+func (m *mockAPI) ListIssueFields(string) ([]youtrack.ProjectField, error) { return nil, nil }
+func (m *mockAPI) SetIssueFields(string, []youtrack.FieldUpdate) error     { return nil }
+func (m *mockAPI) AddBundleValue(youtrack.ProjectField, string) error      { return nil }
+func (m *mockAPI) UploadAttachments(string, []youtrack.UploadFile) ([]youtrack.Attachment, error) {
+	return nil, nil
+}
 func (m *mockAPI) ListLinkTypes() ([]youtrack.LinkType, error)               { return nil, nil }
 func (m *mockAPI) CreateLink(string, string, string) error                   { return nil }
 func (m *mockAPI) RemoveLink(string, string, string) error                   { return nil }
