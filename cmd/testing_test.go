@@ -46,6 +46,13 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		boardViewSprint = ""
 		boardAddSprint = ""
 		boardRemoveSprint = ""
+		transitionsUser = "me"
+		transitionsSince = "7d"
+		transitionsUntil = ""
+		transitionsField = "State"
+		transitionsBoard = ""
+		transitionsProject = ""
+		transitionsQuery = ""
 		loginURL = ""
 		loginToken = ""
 		// Reset cobra's Changed state on all flags.

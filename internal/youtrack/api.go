@@ -30,6 +30,8 @@ type API interface {
 	AddIssueToSprint(agileID, sprintID, idReadable string) error
 	RemoveIssueFromSprint(agileID, sprintID, issueID string) error
 	IssueBoards(issueID string) ([]BoardMembership, error)
+	BoardIssues(board *Agile) ([]string, error)
+	ListFieldActivities(f FieldActivityFilter) ([]FieldActivity, error)
 	ListAttachments(issueID string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error
 	UploadAttachments(issueID string, files []UploadFile) ([]Attachment, error)

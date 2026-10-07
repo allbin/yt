@@ -71,9 +71,7 @@ type sprintScan struct {
 
 // IssueBoards derives which boards and sprints an issue is on. It lists boards
 // whose projects include the issue's project, then scans those boards' sprints
-// for the issue. The sprint scans run concurrently (bounded), so latency is
-// roughly one round-trip regardless of sprint count. The returned memberships
-// preserve board/sprint order. Returns an empty slice when the issue is on no
+// for the issue. The returned memberships preserve board/sprint order. Returns an empty slice when the issue is on no
 // scanned board.
 func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 	boards, err := c.ListBoards()
@@ -96,7 +94,50 @@ func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 		return nil, nil
 	}
 
-	member := make([]bool, len(scans))
+	sprintIDs, err := c.scanSprints(scans)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []BoardMembership
+	for i, s := range scans {
+		if containsFold(sprintIDs[i], issueID) {
+			out = append(out, BoardMembership{Board: s.board, Sprint: s.sprint})
+		}
+	}
+	return out, nil
+}
+
+// BoardIssues returns the readable IDs of the issues on any of a board's
+// sprints, deduplicated, in first-seen sprint order.
+func (c *Client) BoardIssues(board *Agile) ([]string, error) {
+	var scans []sprintScan
+	for _, s := range board.SprintList() {
+		scans = append(scans, sprintScan{board.Name, s.Name, board.ID, s.ID})
+	}
+	sprintIDs, err := c.scanSprints(scans)
+	if err != nil {
+		return nil, err
+	}
+
+	seen := map[string]bool{}
+	var out []string
+	for _, ids := range sprintIDs {
+		for _, id := range ids {
+			if !seen[id] {
+				seen[id] = true
+				out = append(out, id)
+			}
+		}
+	}
+	return out, nil
+}
+
+// scanSprints lists each scan's sprint issues concurrently (bounded), so
+// latency is roughly one round-trip regardless of sprint count. Results are
+// indexed like scans.
+func (c *Client) scanSprints(scans []sprintScan) ([][]string, error) {
+	ids := make([][]string, len(scans))
 	errs := make([]error, len(scans))
 	sem := make(chan struct{}, membershipConcurrency)
 	var wg sync.WaitGroup
@@ -106,26 +147,17 @@ func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			ids, err := c.ListSprintIssues(scans[i].agileID, scans[i].sprintID)
-			if err != nil {
-				errs[i] = err
-				return
-			}
-			member[i] = containsFold(ids, issueID)
+			ids[i], errs[i] = c.ListSprintIssues(scans[i].agileID, scans[i].sprintID)
 		}(i)
 	}
 	wg.Wait()
 
-	var out []BoardMembership
-	for i, s := range scans {
-		if errs[i] != nil {
-			return nil, errs[i]
-		}
-		if member[i] {
-			out = append(out, BoardMembership{Board: s.board, Sprint: s.sprint})
+	for _, err := range errs {
+		if err != nil {
+			return nil, err
 		}
 	}
-	return out, nil
+	return ids, nil
 }
 
 // projectPrefix extracts the project short name from a readable issue ID, e.g.

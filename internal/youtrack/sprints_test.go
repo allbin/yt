@@ -180,3 +180,46 @@ func TestProjectPrefix(t *testing.T) {
 		}
 	}
 }
+
+func TestBoardIssues(t *testing.T) {
+	sprintIssues := map[string][]string{
+		"/api/agiles/A1/sprints/S1/issues": {"AX-1", "AX-2"},
+		"/api/agiles/A1/sprints/S2/issues": {"AX-2", "AX-3"},
+	}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ids, ok := sprintIssues[r.URL.Path]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		refs := make([]map[string]string, len(ids))
+		for i, id := range ids {
+			refs[i] = map[string]string{"idReadable": id}
+		}
+		if err := json.NewEncoder(w).Encode(refs); err != nil {
+			t.Error(err)
+		}
+	}))
+	defer srv.Close()
+
+	board := &Agile{ID: "A1", Name: "AllTix", Sprints: []Sprint{{ID: "S1"}, {ID: "S2"}}}
+	ids, err := NewClient(srv.URL, "token").BoardIssues(board)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(ids, ",") != "AX-1,AX-2,AX-3" {
+		t.Errorf("ids = %v, want AX-1,AX-2,AX-3 deduplicated", ids)
+	}
+}
+
+func TestBoardIssuesSprintError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	board := &Agile{ID: "A1", Sprints: []Sprint{{ID: "S1"}}}
+	if _, err := NewClient(srv.URL, "token").BoardIssues(board); err == nil {
+		t.Error("want error when a sprint lookup fails")
+	}
+}

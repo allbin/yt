@@ -40,5 +40,6 @@ Environment variables take precedence over the config file.
 * [yt project](yt_project.md)	 - Inspect YouTrack project details
 * [yt projects](yt_projects.md)	 - List YouTrack projects
 * [yt sprint](yt_sprint.md)	 - Inspect agile board sprints
+* [yt transitions](yt_transitions.md)	 - List state changes from issue activity history
 * [yt unlink](yt_unlink.md)	 - Remove a link between issues
 

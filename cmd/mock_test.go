@@ -44,6 +44,10 @@ type mockAPI struct {
 
 	createdDescription string
 	addedComment       string
+
+	activities     []youtrack.FieldActivity
+	activityFilter youtrack.FieldActivityFilter
+	boardIssues    []string
 }
 
 func (m *mockAPI) CurrentUser() (*youtrack.User, error) {
@@ -100,6 +104,13 @@ func (m *mockAPI) RemoveIssueFromSprint(agileID, sprintID, issueID string) error
 }
 func (m *mockAPI) IssueBoards(string) ([]youtrack.BoardMembership, error) {
 	return m.issueBoards, m.sprintErr
+}
+func (m *mockAPI) BoardIssues(*youtrack.Agile) ([]string, error) {
+	return m.boardIssues, m.sprintErr
+}
+func (m *mockAPI) ListFieldActivities(f youtrack.FieldActivityFilter) ([]youtrack.FieldActivity, error) {
+	m.activityFilter = f
+	return m.activities, nil
 }
 func (m *mockAPI) ListAttachments(string) ([]youtrack.Attachment, error) { return nil, nil }
 func (m *mockAPI) DownloadAttachment(string, io.Writer) error            { return nil }

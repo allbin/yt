@@ -1,6 +1,6 @@
 ---
 name: yt
-description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, upload or download an attachment, add a value to a project field, or branch from an issue."
+description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, see who moved which cards between states (e.g. for a standup), upload or download an attachment, add a value to a project field, or branch from an issue."
 allowed-tools: Bash(yt *)
 ---
 
@@ -54,6 +54,27 @@ yt board remove <board> <issue>... [--sprint <name>]
 
 Both are idempotent: `add` reports `(already on board)` and `remove` reports
 `(not on board)` rather than failing.
+
+## Activity history
+
+To see which cards someone actually moved — for a standup or a weekly
+summary — read the activity history, not the current assignee or `updated`
+time:
+
+```bash
+yt transitions --json                                  # my State changes, last 7 days
+yt transitions -u alice --since 2026-09-28 --until 2026-10-04 --json
+yt transitions -u all --board AllTix --since 14d --json
+```
+
+Each entry has `issue`, `summary`, `author`, `time`, `from`, and `to`, oldest
+first. `--user` defaults to `me`; `all` drops the user filter. `--since` and
+`--until` take a date, an RFC 3339 time, or a duration like `7d`/`2w`; a
+date-only `--until` includes that day. `--board` switches to the field the
+board's columns are bound to, adds `fromColumn`/`toColumn`, and keeps only
+issues on the board's sprints. `--field` lists another field's changes, and
+`-p`/`-q` narrow the issues. An issue moved twice appears twice; group by
+`issue` when summarising.
 
 ## Creating and updating issues
 

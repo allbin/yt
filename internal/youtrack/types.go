@@ -48,7 +48,13 @@ type CustomField struct {
 // DisplayValue returns a human-readable string for the field value.
 // Handles single objects (enum/user), arrays (multi-value), and plain strings.
 func (cf *CustomField) DisplayValue() string {
-	if len(cf.Value) == 0 || string(cf.Value) == "null" {
+	return displayValue(cf.Value)
+}
+
+// displayValue renders a raw field value: single objects (enum/user), arrays
+// (multi-value), and plain strings. Shared by custom fields and activity items.
+func displayValue(raw json.RawMessage) string {
+	if len(raw) == 0 || string(raw) == "null" {
 		return ""
 	}
 
@@ -59,7 +65,7 @@ func (cf *CustomField) DisplayValue() string {
 		Text         string `json:"text"`
 		Presentation string `json:"presentation"`
 	}
-	if err := json.Unmarshal(cf.Value, &obj); err == nil {
+	if err := json.Unmarshal(raw, &obj); err == nil {
 		switch {
 		case obj.Name != "":
 			return obj.Name
@@ -77,7 +83,7 @@ func (cf *CustomField) DisplayValue() string {
 	var arr []struct {
 		Name string `json:"name"`
 	}
-	if err := json.Unmarshal(cf.Value, &arr); err == nil && len(arr) > 0 {
+	if err := json.Unmarshal(raw, &arr); err == nil && len(arr) > 0 {
 		names := make([]string, 0, len(arr))
 		for _, item := range arr {
 			if item.Name != "" {
@@ -88,7 +94,7 @@ func (cf *CustomField) DisplayValue() string {
 	}
 
 	var s string
-	if err := json.Unmarshal(cf.Value, &s); err == nil {
+	if err := json.Unmarshal(raw, &s); err == nil {
 		return s
 	}
 
