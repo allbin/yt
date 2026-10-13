@@ -30,6 +30,16 @@ yt issue comments <ID> --json
 `yt issue <ID>` includes the issue's links, board/sprint membership, and
 attachments, so it usually answers a question in one call.
 
+A full `--json` list carries every description, so beyond about 50 issues it
+is too big to read in one go. Use `--json --compact` for a scan (one small
+object per issue: id, summary, state, type, priority, assignee, tags,
+updated), or write the full form to a file and query it with jq:
+
+```bash
+yt issue list -p AX -n 500 --json --compact
+yt issue list -p AX -n 500 --json > /tmp/ax.json && jq '.[] | select(.resolved==null) | .idReadable' /tmp/ax.json
+```
+
 Every `--assignee` accepts `me`, a login, or a full name. `-q/--query` takes raw
 YouTrack search syntax.
 

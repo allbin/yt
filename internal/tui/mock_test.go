@@ -20,13 +20,16 @@ type mockAPI struct {
 
 func (m *mockAPI) GetIssue(string) (*youtrack.Issue, error)         { return m.issue, m.issueErr }
 func (m *mockAPI) ListIssues(string, int) ([]youtrack.Issue, error) { return m.issues, nil }
-func (m *mockAPI) ListBoards() ([]youtrack.Agile, error)            { return nil, nil }
-func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)   { return m.board, m.boardErr }
-func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
-func (m *mockAPI) ListProjects() ([]youtrack.Project, error)        { return nil, nil }
-func (m *mockAPI) CurrentUser() (*youtrack.User, error)             { return nil, nil }
-func (m *mockAPI) ResolveUser(string) (string, error)               { return "", nil }
-func (m *mockAPI) UpdateIssue(string, string) error                 { return nil }
+func (m *mockAPI) ListIssuesCompact(string, int) ([]youtrack.IssueCompact, error) {
+	return nil, nil
+}
+func (m *mockAPI) ListBoards() ([]youtrack.Agile, error)           { return nil, nil }
+func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
+func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error) { return m.board, m.boardErr }
+func (m *mockAPI) ListProjects() ([]youtrack.Project, error)       { return nil, nil }
+func (m *mockAPI) CurrentUser() (*youtrack.User, error)            { return nil, nil }
+func (m *mockAPI) ResolveUser(string) (string, error)              { return "", nil }
+func (m *mockAPI) UpdateIssue(string, string) error                { return nil }
 func (m *mockAPI) UpdateIssueFields(string, map[string]string, []youtrack.FieldUpdate) error {
 	return nil
 }

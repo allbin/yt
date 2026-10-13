@@ -16,6 +16,7 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 
 	resetFlags := func() {
 		jsonOutput = false
+		listCompact = false
 		createProject = ""
 		createSummary = ""
 		createDescription = ""

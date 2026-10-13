@@ -6,6 +6,7 @@ import "io"
 type API interface {
 	GetIssue(id string) (*Issue, error)
 	ListIssues(query string, limit int) ([]Issue, error)
+	ListIssuesCompact(query string, limit int) ([]IssueCompact, error)
 	ListBoards() ([]Agile, error)
 	GetBoardByName(name string) (*Agile, error)
 	GetBoardForView(name string) (*Agile, error)

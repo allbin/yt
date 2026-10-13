@@ -501,3 +501,42 @@ func TestRunIssueCreateDescriptionFromFile(t *testing.T) {
 		t.Errorf("createdDescription = %q, want multi-line body", mock.createdDescription)
 	}
 }
+
+func TestRunIssueListCompact(t *testing.T) {
+	run := setupTest(t, &mockAPI{
+		issues: []youtrack.Issue{
+			{IDReadable: "PROJ-1", Summary: "First issue", Tags: []youtrack.Tag{{Name: "QA"}},
+				CustomFields: []youtrack.CustomField{{Name: "State", Value: json.RawMessage(`{"name":"Open"}`)}}},
+			{IDReadable: "PROJ-2", Summary: "Second issue"},
+		},
+	})
+
+	out, err := run("issue", "list", "--json", "--compact")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var got []map[string]any
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, out)
+	}
+	if len(got) != 2 || got[0]["id"] != "PROJ-1" || got[0]["state"] != "Open" {
+		t.Errorf("got %+v", got)
+	}
+	for _, key := range []string{"id", "summary", "state", "type", "priority", "assignee", "tags", "updated"} {
+		if _, ok := got[1][key]; !ok {
+			t.Errorf("compact object missing %q: %v", key, got[1])
+		}
+	}
+	if _, ok := got[0]["description"]; ok {
+		t.Error("compact object carries a description")
+	}
+}
+
+func TestRunIssueListCompactNeedsJSON(t *testing.T) {
+	run := setupTest(t, &mockAPI{})
+
+	_, err := run("issue", "list", "--compact")
+	if err == nil || !strings.Contains(err.Error(), "--json") {
+		t.Fatalf("err = %v, want a hint to add --json", err)
+	}
+}

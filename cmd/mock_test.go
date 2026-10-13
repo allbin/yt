@@ -56,11 +56,14 @@ func (m *mockAPI) CurrentUser() (*youtrack.User, error) {
 
 func (m *mockAPI) GetIssue(string) (*youtrack.Issue, error)         { return m.issue, m.issueErr }
 func (m *mockAPI) ListIssues(string, int) ([]youtrack.Issue, error) { return m.issues, nil }
-func (m *mockAPI) ListBoards() ([]youtrack.Agile, error)            { return m.boards, nil }
-func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)   { return m.board, m.boardErr }
-func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
-func (m *mockAPI) ListProjects() ([]youtrack.Project, error)        { return m.projects, nil }
-func (m *mockAPI) ResolveUser(q string) (string, error)             { return q, nil }
+func (m *mockAPI) ListIssuesCompact(string, int) ([]youtrack.IssueCompact, error) {
+	return youtrack.Compacts(m.issues), nil
+}
+func (m *mockAPI) ListBoards() ([]youtrack.Agile, error)           { return m.boards, nil }
+func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
+func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error) { return m.board, m.boardErr }
+func (m *mockAPI) ListProjects() ([]youtrack.Project, error)       { return m.projects, nil }
+func (m *mockAPI) ResolveUser(q string) (string, error)            { return q, nil }
 func (m *mockAPI) UpdateIssue(_ string, cmd string) error {
 	m.command = cmd
 	return m.updateErr

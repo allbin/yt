@@ -7,6 +7,11 @@ List YouTrack issues
 List YouTrack issues with optional filters. Filters are combined into a
 YouTrack search query. Use --query for arbitrary YouTrack query syntax.
 
+--json prints every issue in full: description, attachments and all custom
+fields. For long lists add --compact, which prints one small object per
+issue (id, summary, state, type, priority, assignee, tags, updated) and asks
+the server for nothing else.
+
 ```
 yt issue list [flags]
 ```
@@ -28,12 +33,16 @@ yt issue list [flags]
 
   # output as JSON, limit to 5 results
   yt issue list -p PROJ -n 5 --json
+
+  # a whole project as compact JSON
+  yt issue list -p PROJ -n 500 --json --compact
 ```
 
 ### Options
 
 ```
   -a, --assignee string   filter by assignee
+      --compact           with --json: one small object per issue, no description
   -h, --help              help for list
   -n, --limit int         max results (default 20)
   -p, --project string    filter by project
