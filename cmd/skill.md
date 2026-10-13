@@ -37,8 +37,15 @@ updated), or write the full form to a file and query it with jq:
 
 ```bash
 yt issue list -p AX -n 500 --json --compact
-yt issue list -p AX -n 500 --json > /tmp/ax.json && jq '.[] | select(.resolved==null) | .idReadable' /tmp/ax.json
+yt issue list -p AX -n 500 --json > /tmp/ax.json && jq '.[] | select(.fields.State=="Blocked") | .idReadable' /tmp/ax.json
 ```
+
+Read custom fields from the `fields` map, not from `customFields`: `fields`
+holds one value per field name, a string for a single-value field and a list
+for a multi-value one (`{"State":"Planned","Subsystem":["Webticket"]}`), and
+`null` when the field is empty. `customFields` is the raw API shape, whose
+`value` is an object for State and an array for Subsystem, so a jq path
+written for one breaks on the other.
 
 Every `--assignee` accepts `me`, a login, or a full name. `-q/--query` takes raw
 YouTrack search syntax.

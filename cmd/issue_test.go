@@ -540,3 +540,32 @@ func TestRunIssueListCompactNeedsJSON(t *testing.T) {
 		t.Fatalf("err = %v, want a hint to add --json", err)
 	}
 }
+
+func TestRunIssueJSONHasFieldMap(t *testing.T) {
+	run := setupTest(t, &mockAPI{
+		issue: &youtrack.Issue{
+			IDReadable: "AX-1050",
+			CustomFields: []youtrack.CustomField{
+				{Name: "State", Value: json.RawMessage(`{"name":"Planned"}`)},
+				{Name: "Subsystem", Value: json.RawMessage(`[{"name":"Webticket"}]`)},
+			},
+		},
+	})
+
+	out, err := run("issue", "AX-1050", "--json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var got struct {
+		Fields map[string]any `json:"fields"`
+	}
+	if err := json.Unmarshal([]byte(out), &got); err != nil {
+		t.Fatalf("invalid JSON: %v\n%s", err, out)
+	}
+	if got.Fields["State"] != "Planned" {
+		t.Errorf("fields.State = %v, want Planned", got.Fields["State"])
+	}
+	if sub, ok := got.Fields["Subsystem"].([]any); !ok || len(sub) != 1 || sub[0] != "Webticket" {
+		t.Errorf("fields.Subsystem = %v, want [Webticket]", got.Fields["Subsystem"])
+	}
+}

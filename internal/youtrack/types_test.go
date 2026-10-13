@@ -2,6 +2,8 @@ package youtrack
 
 import (
 	"encoding/json"
+	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -90,4 +92,87 @@ func TestIssueDesc(t *testing.T) {
 			t.Errorf("Desc() = %q, want hello", got)
 		}
 	})
+}
+
+func TestIssueFieldMap(t *testing.T) {
+	issue := Issue{
+		CustomFields: []CustomField{
+			{Name: "State", Value: json.RawMessage(`{"name":"Planned","$type":"StateBundleElement"}`)},
+			{Name: "Assignee", Value: json.RawMessage(`{"login":"jdoe","fullName":"Jane Doe"}`)},
+			{Name: "Subsystem", Value: json.RawMessage(`[{"name":"Webticket"},{"name":"API"}]`)},
+			{Name: "Estimation", Value: json.RawMessage(`{"presentation":"2h","minutes":120}`)},
+			{Name: "Due Date", Value: json.RawMessage(`1760000000000`)},
+			{Name: "Notes", Value: json.RawMessage(`{"text":"some notes"}`)},
+			{Name: "Planning", Value: json.RawMessage(`null`)},
+			{Name: "Empty list", Value: json.RawMessage(`[]`)},
+		},
+	}
+
+	got := issue.FieldMap()
+	want := map[string]any{
+		"State":      "Planned",
+		"Assignee":   "Jane Doe",
+		"Subsystem":  []any{"Webticket", "API"},
+		"Estimation": "2h",
+		"Due Date":   json.Number("1760000000000"),
+		"Notes":      "some notes",
+		"Planning":   nil,
+		"Empty list": []any{},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("FieldMap() = %#v\nwant %#v", got, want)
+	}
+}
+
+func TestIssueMarshalJSONAddsFields(t *testing.T) {
+	desc := "body"
+	issue := Issue{
+		IDReadable:  "AX-1",
+		Summary:     "One",
+		Description: &desc,
+		CustomFields: []CustomField{
+			{Name: "State", Value: json.RawMessage(`{"name":"Open"}`)},
+			{Name: "Subsystem", Value: json.RawMessage(`[{"name":"API"}]`)},
+		},
+	}
+	data, err := json.Marshal(&issue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string]any
+	if err := json.Unmarshal(data, &out); err != nil {
+		t.Fatal(err)
+	}
+	if out["idReadable"] != "AX-1" || out["description"] != "body" {
+		t.Errorf("raw keys lost: %v", out)
+	}
+	fields, _ := out["fields"].(map[string]any)
+	if fields["State"] != "Open" {
+		t.Errorf("fields.State = %v, want Open", fields["State"])
+	}
+	if sub, ok := fields["Subsystem"].([]any); !ok || len(sub) != 1 || sub[0] != "API" {
+		t.Errorf("fields.Subsystem = %v, want [API]", fields["Subsystem"])
+	}
+	if _, ok := out["customFields"]; !ok {
+		t.Error("customFields dropped from JSON")
+	}
+
+	// The map is derived: reading the JSON back ignores it.
+	var back Issue
+	if err := json.Unmarshal(data, &back); err != nil {
+		t.Fatal(err)
+	}
+	if back.Field("State") != "Open" {
+		t.Errorf("round trip lost State: %+v", back)
+	}
+}
+
+func TestIssueMarshalJSONEmptyFields(t *testing.T) {
+	data, err := json.Marshal(Issue{IDReadable: "AX-1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"fields":{}`) {
+		t.Errorf("want an empty fields object, got %s", data)
+	}
 }

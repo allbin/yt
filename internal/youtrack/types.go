@@ -1,6 +1,7 @@
 package youtrack
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 )
@@ -17,6 +18,69 @@ type Issue struct {
 	Attachments  []Attachment      `json:"attachments"`
 	Links        []IssueLink       `json:"links,omitempty"`
 	Boards       []BoardMembership `json:"boards,omitempty"`
+}
+
+// MarshalJSON adds "fields", the custom fields flattened to one value each,
+// beside the raw customFields: a scalar for a single-value field, a list for
+// a multi-value one, so a consumer need not know a field's cardinality.
+func (i Issue) MarshalJSON() ([]byte, error) {
+	type raw Issue
+	return json.Marshal(struct {
+		raw
+		Fields map[string]any `json:"fields"`
+	}{raw(i), i.FieldMap()})
+}
+
+// FieldMap flattens the custom fields by name. A single-value field maps to
+// its display scalar (bundle name, user's full name, text, number), a
+// multi-value field to a list of them, an empty field to nil. Never nil.
+func (i *Issue) FieldMap() map[string]any {
+	m := make(map[string]any, len(i.CustomFields))
+	for _, cf := range i.CustomFields {
+		m[cf.Name] = flatValue(cf.Value)
+	}
+	return m
+}
+
+// flatValue reduces a raw field value: objects to their display scalar,
+// arrays element-wise, scalars unchanged.
+func flatValue(raw json.RawMessage) any {
+	if len(raw) == 0 {
+		return nil
+	}
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	dec.UseNumber()
+	var v any
+	if err := dec.Decode(&v); err != nil {
+		return nil
+	}
+	switch x := v.(type) {
+	case map[string]any:
+		return objectScalar(x)
+	case []any:
+		out := make([]any, 0, len(x))
+		for _, item := range x {
+			if obj, ok := item.(map[string]any); ok {
+				out = append(out, objectScalar(obj))
+			} else {
+				out = append(out, item)
+			}
+		}
+		return out
+	default:
+		return v
+	}
+}
+
+// objectScalar picks the display value of a value object, in the same order
+// displayValue does: name, full name, presentation, text, login.
+func objectScalar(obj map[string]any) any {
+	for _, key := range []string{"name", "fullName", "presentation", "text", "login"} {
+		if s, ok := obj[key].(string); ok && s != "" {
+			return s
+		}
+	}
+	return nil
 }
 
 // BoardMembership records that an issue sits on a given board's sprint. It is
