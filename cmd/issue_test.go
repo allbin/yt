@@ -614,3 +614,26 @@ func TestRunIssueJSONHasFieldMap(t *testing.T) {
 		t.Errorf("fields.Subsystem = %v, want [Webticket]", got.Fields["Subsystem"])
 	}
 }
+
+func TestRunIssueShowsQueryBoardMembership(t *testing.T) {
+	run := setupTest(t, &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "AX-1050", Summary: "On a query board"},
+		issueBoards: []youtrack.BoardMembership{{Board: "AllTix Webticket", Kind: youtrack.BoardQuery}},
+	})
+
+	out, err := run("issue", "AX-1050")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "AllTix Webticket") || !strings.Contains(out, "by query") {
+		t.Errorf("output missing query board membership: %s", out)
+	}
+
+	out, err = run("issue", "AX-1050", "--json")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(out, `"kind": "query"`) || strings.Contains(out, `"sprint"`) {
+		t.Errorf("JSON membership should carry kind and no sprint: %s", out)
+	}
+}

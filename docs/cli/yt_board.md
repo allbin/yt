@@ -4,8 +4,15 @@ Show board issues or list boards
 
 ### Synopsis
 
-Show issues on an agile board's sprint. Looks up the board by name
-(case-insensitive). Defaults to the current sprint.
+Show the issues on an agile board. Looks up the board by name
+(case-insensitive).
+
+A board is one of four kinds, by what puts an issue on it: "sprints" (the
+issue is assigned to one of the board's sprints; shown for the current sprint
+unless --sprint names another), "query" (the issue matches the board's query),
+"projects" (every issue of the board's projects) or "manual" (added by hand).
+The last three have no sprints. --json prints the kind, what membership means
+for it, the sprint shown, and the issues.
 
 Filters are handled server-side by YouTrack, so assignee supports "me",
 login names, and full names.
@@ -34,7 +41,7 @@ yt board [name] [flags]
   # combine filters with extra query
   yt board HållKoll -a me -q "sort by: Priority"
 
-  # JSON output
+  # JSON output: kind, membership, sprint and issues
   yt board HållKoll --json
 ```
 

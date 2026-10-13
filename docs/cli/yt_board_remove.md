@@ -9,7 +9,8 @@ Remove one or more issues from an agile board's sprint.
 The board is matched by name (case-insensitive). Without --sprint the board's
 current sprint is used.
 
-Removing is idempotent: an issue not on the sprint is reported as such.
+Removing is idempotent: an issue not on the sprint is reported as such. A
+board whose query or projects decide membership takes no removals.
 
 ```
 yt board remove <board> <issue>... [flags]

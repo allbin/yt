@@ -1,7 +1,6 @@
 package boarddata
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/allbin/yt/internal/youtrack"
@@ -62,8 +61,7 @@ func (f *Fetcher) fetchIssues(board *youtrack.Agile, sprintName string) (Result,
 		}
 	}
 
-	sprint := resolveSprint(board, sprintName)
-	query := fmt.Sprintf("Board %s: {%s}", board.Name, sprint)
+	query := board.SearchQuery(resolveSprint(board, sprintName))
 	issues, err := f.client.ListIssues(query, 0)
 	if err != nil {
 		return Result{}, err

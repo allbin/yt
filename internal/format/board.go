@@ -17,7 +17,7 @@ func BoardList(w io.Writer, boards []youtrack.Agile) error {
 		return err
 	}
 
-	t := newTable("NAME", "PROJECTS", "CURRENT SPRINT").
+	t := newTable("NAME", "KIND", "PROJECTS", "CURRENT SPRINT").
 		StyleFunc(func(row, col int) lipgloss.Style {
 			s := lipgloss.NewStyle().Padding(0, 1)
 			if row == table.HeaderRow {
@@ -34,20 +34,25 @@ func BoardList(w io.Writer, boards []youtrack.Agile) error {
 		if b.CurrentSprint != nil {
 			sprint = b.CurrentSprint.Name
 		}
-		t.Row(b.Name, formatProjects(b.Projects), sprint)
+		t.Row(b.Name, b.Kind(), formatProjects(b.Projects), sprint)
 	}
 
 	_, err := fmt.Fprintln(w, t.Render())
 	return err
 }
 
-func SprintIssues(w io.Writer, board, sprint string, issues []youtrack.Issue) error {
+// BoardIssues renders a board's issues under a header naming the sprint
+// shown, or, on a sprintless board, what puts an issue on it.
+func BoardIssues(w io.Writer, board *youtrack.Agile, sprint *youtrack.Sprint, issues []youtrack.Issue) error {
 	ew := &errWriter{w: w}
 
-	header := lipgloss.NewStyle().Bold(true).Foreground(ColorAccent).Render(board)
-	sprintName := StyleBold.Render(sprint)
+	header := lipgloss.NewStyle().Bold(true).Foreground(ColorAccent).Render(board.Name)
+	scope := StyleBold.Render(board.Membership())
+	if sprint != nil {
+		scope = StyleBold.Render(sprint.Name)
+	}
 	count := StyleDim.Render(fmt.Sprintf("(%d issues)", len(issues)))
-	ew.printf("%s — %s  %s\n\n", header, sprintName, count)
+	ew.printf("%s — %s  %s\n\n", header, scope, count)
 
 	if len(issues) == 0 {
 		ew.println(StyleDim.Render("No issues."))

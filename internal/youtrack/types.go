@@ -3,6 +3,7 @@ package youtrack
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -83,12 +84,14 @@ func objectScalar(obj map[string]any) any {
 	return nil
 }
 
-// BoardMembership records that an issue sits on a given board's sprint. It is
+// BoardMembership records that an issue is on a board, and why: Kind is the
+// board's kind, Sprint the sprint it sits on for a sprint-based board. It is
 // not returned by the YouTrack issue API; the CLI derives it by scanning the
-// board's sprints and populates it for single-issue views.
+// boards' sprints and populates it for single-issue views.
 type BoardMembership struct {
 	Board  string `json:"board"`
-	Sprint string `json:"sprint"`
+	Kind   string `json:"kind"`
+	Sprint string `json:"sprint,omitempty"`
 }
 
 type Attachment struct {
@@ -280,10 +283,98 @@ type Agile struct {
 	SwimlaneSettings *AgileSwimlaneSetting `json:"swimlaneSettings,omitempty"`
 }
 
-// SprintsSettings describes whether a board is sprint-based. When sprints are
-// disabled the board behaves as a single implicit sprint.
+// SprintsSettings describes how issues get onto a board. When sprints are
+// disabled the API still exposes one implicit sprint, which holds every issue
+// on the board whatever put it there.
 type SprintsSettings struct {
-	DisableSprints bool `json:"disableSprints"`
+	DisableSprints  bool   `json:"disableSprints"`
+	IsExplicit      bool   `json:"isExplicit"`
+	ExplicitQuery   string `json:"explicitQuery"`
+	SprintSyncField *struct {
+		Name string `json:"name"`
+	} `json:"sprintSyncField"`
+}
+
+// Board kinds, named by what puts an issue on the board.
+const (
+	BoardSprints  = "sprints"  // the issue is assigned to one of the board's sprints
+	BoardQuery    = "query"    // the issue matches the board's query
+	BoardProjects = "projects" // the issue belongs to one of the board's projects
+	BoardManual   = "manual"   // the issue was added to the board by hand
+)
+
+// Sprintless reports whether the board has sprints disabled.
+func (a *Agile) Sprintless() bool {
+	return a.SprintsSettings != nil && a.SprintsSettings.DisableSprints
+}
+
+// Kind classifies the board by what puts an issue on it.
+func (a *Agile) Kind() string {
+	s := a.SprintsSettings
+	if s == nil || !s.DisableSprints {
+		return BoardSprints
+	}
+	switch {
+	case s.IsExplicit:
+		return BoardManual
+	case a.Query() != "":
+		return BoardQuery
+	default:
+		return BoardProjects
+	}
+}
+
+// Query returns the search that selects a query-based board's issues, or "".
+func (a *Agile) Query() string {
+	if a.SprintsSettings == nil || a.SprintsSettings.IsExplicit {
+		return ""
+	}
+	return strings.TrimSpace(a.SprintsSettings.ExplicitQuery)
+}
+
+// Automatic reports whether membership follows from the issue itself (its
+// fields or project), so that nothing can be added to or removed from the
+// board by hand.
+func (a *Agile) Automatic() bool {
+	k := a.Kind()
+	return k == BoardQuery || k == BoardProjects
+}
+
+// Membership says what puts an issue on the board.
+func (a *Agile) Membership() string {
+	switch a.Kind() {
+	case BoardQuery:
+		return fmt.Sprintf("issues matching the query %q", a.Query())
+	case BoardProjects:
+		return "every issue of " + strings.Join(a.ProjectNames(), ", ")
+	case BoardManual:
+		return "issues added to the board by hand"
+	default:
+		if f := a.SprintsSettings; f != nil && f.SprintSyncField != nil {
+			return fmt.Sprintf("issues whose %s names one of the board's sprints", f.SprintSyncField.Name)
+		}
+		return "issues assigned to one of the board's sprints"
+	}
+}
+
+// SearchQuery returns the YouTrack search that lists the board's issues: on a
+// sprint-based board, those of the named sprint. The board name is not
+// braced: "Board {AllTix}: {...}" matches nothing on the server, while the
+// "has:" form takes the braces.
+func (a *Agile) SearchQuery(sprint string) string {
+	if a.Sprintless() {
+		return fmt.Sprintf("has: {Board %s}", a.Name)
+	}
+	return fmt.Sprintf("Board %s: {%s}", a.Name, sprint)
+}
+
+// ProjectNames returns the short names of the board's projects.
+func (a *Agile) ProjectNames() []string {
+	names := make([]string, len(a.Projects))
+	for i, p := range a.Projects {
+		names[i] = p.ShortName
+	}
+	return names
 }
 
 // SprintList returns the board's sprints, falling back to the current sprint

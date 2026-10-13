@@ -63,16 +63,28 @@ func (c *Client) RemoveIssueFromSprint(agileID, sprintID, issueID string) error 
 	return nil
 }
 
-// sprintScan is one board/sprint to check for an issue.
+// sprintScan is one board/sprint to check for an issue. On a sprintless
+// board the sprint is the implicit one and is not reported.
 type sprintScan struct {
-	board, sprint     string
-	agileID, sprintID string
+	board, kind, sprint string
+	agileID, sprintID   string
+	sprintless          bool
 }
 
-// IssueBoards derives which boards and sprints an issue is on. It lists boards
-// whose projects include the issue's project, then scans those boards' sprints
-// for the issue. The returned memberships preserve board/sprint order. Returns an empty slice when the issue is on no
-// scanned board.
+func scansOf(b *Agile) []sprintScan {
+	var scans []sprintScan
+	for _, s := range b.SprintList() {
+		scans = append(scans, sprintScan{b.Name, b.Kind(), s.Name, b.ID, s.ID, b.Sprintless()})
+	}
+	return scans
+}
+
+// IssueBoards derives which boards an issue is on, whatever their kind: it
+// lists boards whose projects include the issue's project, then scans those
+// boards' sprints for the issue. A sprintless board's implicit sprint holds
+// everything its query, projects or manual adds put on it. The returned
+// memberships preserve board/sprint order. Returns an empty slice when the
+// issue is on no scanned board.
 func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 	boards, err := c.ListBoards()
 	if err != nil {
@@ -86,9 +98,7 @@ func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 		if prefix != "" && !b.HasProject(prefix) {
 			continue
 		}
-		for _, s := range b.SprintList() {
-			scans = append(scans, sprintScan{b.Name, s.Name, b.ID, s.ID})
-		}
+		scans = append(scans, scansOf(b)...)
 	}
 	if len(scans) == 0 {
 		return nil, nil
@@ -102,7 +112,11 @@ func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 	var out []BoardMembership
 	for i, s := range scans {
 		if containsFold(sprintIDs[i], issueID) {
-			out = append(out, BoardMembership{Board: s.board, Sprint: s.sprint})
+			m := BoardMembership{Board: s.board, Kind: s.kind}
+			if !s.sprintless {
+				m.Sprint = s.sprint
+			}
+			out = append(out, m)
 		}
 	}
 	return out, nil
@@ -111,10 +125,7 @@ func (c *Client) IssueBoards(issueID string) ([]BoardMembership, error) {
 // BoardIssues returns the readable IDs of the issues on any of a board's
 // sprints, deduplicated, in first-seen sprint order.
 func (c *Client) BoardIssues(board *Agile) ([]string, error) {
-	var scans []sprintScan
-	for _, s := range board.SprintList() {
-		scans = append(scans, sprintScan{board.Name, s.Name, board.ID, s.ID})
-	}
+	scans := scansOf(board)
 	sprintIDs, err := c.scanSprints(scans)
 	if err != nil {
 		return nil, err

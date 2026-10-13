@@ -18,7 +18,8 @@ var boardRemoveCmd = &cobra.Command{
 The board is matched by name (case-insensitive). Without --sprint the board's
 current sprint is used.
 
-Removing is idempotent: an issue not on the sprint is reported as such.`,
+Removing is idempotent: an issue not on the sprint is reported as such. A
+board whose query or projects decide membership takes no removals.`,
 	Example: `  # remove an issue from the current sprint
   yt board remove AllTix AX-812
 
@@ -61,13 +62,12 @@ func runBoardRemove(cmd *cobra.Command, args []string) error {
 
 	cross := format.StyleDim.Render("✕")
 	for _, c := range changes {
-		note := format.StyleDim.Render("(removed)")
-		if !c.Changed {
-			note = format.StyleDim.Render("(not on board)")
+		note := c.Note
+		if c.Changed {
+			note = "removed"
 		}
-		if _, err := fmt.Fprintf(w, "%s %s %s %s %s %s\n",
-			format.StyleID.Render(c.Issue), cross, c.Board,
-			format.StyleDim.Render("/"), c.Sprint, note); err != nil {
+		if _, err := fmt.Fprintf(w, "%s %s %s%s\n",
+			format.StyleID.Render(c.Issue), cross, boardSprintLabel(c), changeNote(note)); err != nil {
 			return err
 		}
 	}

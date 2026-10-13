@@ -60,17 +60,28 @@ yt sprint list <board> --json
 
 Board names match case-insensitively.
 
-An issue appears on a sprint-based board only if it is assigned to one of that
-board's sprints — setting a project or state is not enough. Manage membership
-explicitly:
+A board's `kind` says what puts an issue on it, and `yt board <name> --json`
+states it with a `membership` sentence:
+
+- `sprints`: the issue is assigned to one of the board's sprints; a project or
+  state alone is not enough. `yt board add` places it on the current sprint,
+  or `--sprint <name>` on another.
+- `query`: the issue matches the board's `query` (e.g. `Subsystem: Webticket`).
+  Nothing is added or removed by hand; set the field the query names.
+- `projects`: every issue of the board's projects is on it.
+- `manual`: no sprints, cards added by hand with `yt board add`.
 
 ```bash
 yt board add <board> <issue>... [--sprint <name>]      # default: current sprint
 yt board remove <board> <issue>... [--sprint <name>]
 ```
 
-Both are idempotent: `add` reports `(already on board)` and `remove` reports
-`(not on board)` rather than failing.
+Both are idempotent: `add` reports `already on board` and `remove` reports
+`not on board` rather than failing. On a `query` or `projects` board, `add`
+reports `on board by its query, nothing to add` for an issue the board shows
+and errors for one it does not, naming the query to match. `yt issue <ID>
+--json` lists every board the issue is on as `{board, kind, sprint}`, with
+`sprint` only on a `sprints` board.
 
 ## Activity history
 

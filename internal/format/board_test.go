@@ -67,7 +67,7 @@ func TestSprintIssues(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := SprintIssues(&buf, "TestBoard", "2026-01", issues); err != nil {
+	if err := BoardIssues(&buf, &youtrack.Agile{Name: "TestBoard"}, &youtrack.Sprint{Name: "2026-01"}, issues); err != nil {
 		t.Fatal(err)
 	}
 	out := buf.String()
@@ -85,7 +85,7 @@ func TestSprintIssues(t *testing.T) {
 
 func TestSprintIssuesEmpty(t *testing.T) {
 	var buf bytes.Buffer
-	if err := SprintIssues(&buf, "TestBoard", "2026-01", nil); err != nil {
+	if err := BoardIssues(&buf, &youtrack.Agile{Name: "TestBoard"}, &youtrack.Sprint{Name: "2026-01"}, nil); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(buf.String(), "No issues") {

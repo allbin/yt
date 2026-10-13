@@ -176,3 +176,47 @@ func TestIssueMarshalJSONEmptyFields(t *testing.T) {
 		t.Errorf("want an empty fields object, got %s", data)
 	}
 }
+
+func TestAgileKind(t *testing.T) {
+	sync := &struct {
+		Name string `json:"name"`
+	}{Name: "Sprint"}
+	tests := []struct {
+		name       string
+		board      Agile
+		kind       string
+		automatic  bool
+		membership string
+	}{
+		{"no_settings", Agile{Name: "A"}, BoardSprints, false, "issues assigned to one of the board's sprints"},
+		{"sprints_explicit", Agile{SprintsSettings: &SprintsSettings{IsExplicit: true}}, BoardSprints, false, "issues assigned to one of the board's sprints"},
+		{"sprints_synced", Agile{SprintsSettings: &SprintsSettings{SprintSyncField: sync}}, BoardSprints, false, "issues whose Sprint names one of the board's sprints"},
+		{"query", Agile{SprintsSettings: &SprintsSettings{DisableSprints: true, ExplicitQuery: "Subsystem: Webticket "}}, BoardQuery, true, `issues matching the query "Subsystem: Webticket"`},
+		{"projects", Agile{Projects: []Project{{ShortName: "AID"}, {ShortName: "KOM"}}, SprintsSettings: &SprintsSettings{DisableSprints: true}}, BoardProjects, true, "every issue of AID, KOM"},
+		{"manual", Agile{SprintsSettings: &SprintsSettings{DisableSprints: true, IsExplicit: true, ExplicitQuery: "ignored"}}, BoardManual, false, "issues added to the board by hand"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.board.Kind(); got != tt.kind {
+				t.Errorf("Kind() = %q, want %q", got, tt.kind)
+			}
+			if got := tt.board.Automatic(); got != tt.automatic {
+				t.Errorf("Automatic() = %v, want %v", got, tt.automatic)
+			}
+			if got := tt.board.Membership(); got != tt.membership {
+				t.Errorf("Membership() = %q, want %q", got, tt.membership)
+			}
+		})
+	}
+}
+
+func TestAgileSearchQuery(t *testing.T) {
+	sprints := Agile{Name: "AllTix"}
+	if got := sprints.SearchQuery("2026-02 Skolmodulen 2"); got != "Board AllTix: {2026-02 Skolmodulen 2}" {
+		t.Errorf("sprint board query = %q", got)
+	}
+	sprintless := Agile{Name: "AllTix Webticket", SprintsSettings: &SprintsSettings{DisableSprints: true, ExplicitQuery: "Subsystem: Webticket"}}
+	if got := sprintless.SearchQuery(""); got != "has: {Board AllTix Webticket}" {
+		t.Errorf("sprintless board query = %q", got)
+	}
+}

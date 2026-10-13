@@ -15,10 +15,12 @@ var boardAddCmd = &cobra.Command{
 	Long: `Add one or more issues to an agile board by placing them on a sprint.
 
 The board is matched by name (case-insensitive). Without --sprint the board's
-current sprint is used.
+current sprint is used; a sprintless board has none and takes no --sprint.
 
 Adding is idempotent: an issue already on the sprint is reported as such and
-left unchanged.`,
+left unchanged. A board whose query or projects decide membership takes no
+adds: an issue it already shows is reported as "on board by its query", one
+it does not show is an error naming what would put it there.`,
 	Example: `  # add an issue to the current sprint
   yt board add AllTix AX-812
 
@@ -61,15 +63,26 @@ func runBoardAdd(cmd *cobra.Command, args []string) error {
 
 	arrow := format.StyleDim.Render("→")
 	for _, c := range changes {
-		note := ""
-		if !c.Changed {
-			note = " " + format.StyleDim.Render("(already on board)")
-		}
-		if _, err := fmt.Fprintf(w, "%s %s %s %s %s%s\n",
-			format.StyleID.Render(c.Issue), arrow, c.Board,
-			format.StyleDim.Render("/"), c.Sprint, note); err != nil {
+		if _, err := fmt.Fprintf(w, "%s %s %s%s\n",
+			format.StyleID.Render(c.Issue), arrow, boardSprintLabel(c), changeNote(c.Note)); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// boardSprintLabel is "Board / Sprint", or just the board on a sprintless one.
+func boardSprintLabel(c sprintChange) string {
+	if c.Sprint == "" {
+		return c.Board
+	}
+	return c.Board + " " + format.StyleDim.Render("/") + " " + c.Sprint
+}
+
+// changeNote renders a change's note as a dim parenthetical, or nothing.
+func changeNote(note string) string {
+	if note == "" {
+		return ""
+	}
+	return " " + format.StyleDim.Render("("+note+")")
 }

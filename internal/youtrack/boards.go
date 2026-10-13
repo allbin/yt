@@ -8,12 +8,13 @@ import (
 )
 
 const (
+	// sprintsSettingsFields is what Kind and Membership need.
+	sprintsSettingsFields = "sprintsSettings(disableSprints,isExplicit,explicitQuery,sprintSyncField(name))"
+
 	agileFields = "id,name,projects(shortName),currentSprint(id,name)," +
-		"sprints(id,name,start,finish),sprintsSettings(disableSprints)"
-	agileDetail = "id,name,projects(shortName),currentSprint(id,name)," +
-		"sprints(id,name,start,finish),sprintsSettings(disableSprints)"
+		"sprints(id,name,start,finish)," + sprintsSettingsFields + ",columnSettings(field(name))"
 	agileBoardView = "id,name,projects(shortName)," +
-		"currentSprint(id,name),sprints(id,name)," +
+		"currentSprint(id,name),sprints(id,name)," + sprintsSettingsFields + "," +
 		"columnSettings(field(name),columns(presentation,ordinal,fieldValues(name,isResolved)))," +
 		"swimlaneSettings(enabled,field(name),values(name))"
 	sprintBoardFields = "columns(agileColumn(presentation),cells(row(id,name,$type," +
@@ -40,7 +41,7 @@ func (c *Client) ListBoards() ([]Agile, error) {
 // GetBoardByName finds a board by case-insensitive name match.
 // Returns the board with its sprint list populated for sprint lookup.
 func (c *Client) GetBoardByName(name string) (*Agile, error) {
-	params := url.Values{"fields": {agileDetail}}
+	params := url.Values{"fields": {agileFields}}
 
 	data, err := c.get("/api/agiles", params)
 	if err != nil {
@@ -101,4 +102,3 @@ func (c *Client) GetSprintBoard(boardID, sprintID string) (*SprintBoard, error) 
 
 	return &board, nil
 }
-

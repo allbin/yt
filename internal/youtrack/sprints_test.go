@@ -102,6 +102,14 @@ func TestIssueBoards(t *testing.T) {
 					Projects: []Project{{ShortName: "OT"}},
 					Sprints:  []Sprint{{ID: "S9", Name: "x"}},
 				},
+				{
+					// Sprintless, query-based: its one implicit sprint holds the matches.
+					ID:              "A3",
+					Name:            "AllTix Webticket",
+					Projects:        []Project{{ShortName: "AX"}},
+					CurrentSprint:   &Sprint{ID: "S0", Name: "First sprint"},
+					SprintsSettings: &SprintsSettings{DisableSprints: true, ExplicitQuery: "Subsystem: Webticket"},
+				},
 			}); err != nil {
 				t.Error(err)
 			}
@@ -109,6 +117,8 @@ func TestIssueBoards(t *testing.T) {
 			writeIDs(t, w, "AX-1")
 		case strings.HasPrefix(r.URL.Path, "/api/agiles/A1/sprints/S2/"):
 			writeIDs(t, w, "AX-812", "AX-3")
+		case strings.HasPrefix(r.URL.Path, "/api/agiles/A3/sprints/S0/"):
+			writeIDs(t, w, "AX-812")
 		default:
 			t.Errorf("unexpected path %q (Other board should be filtered out by project)", r.URL.Path)
 			http.NotFound(w, r)
@@ -121,11 +131,15 @@ func TestIssueBoards(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(boards) != 1 {
-		t.Fatalf("memberships = %v, want 1", boards)
+	if len(boards) != 2 {
+		t.Fatalf("memberships = %v, want 2", boards)
 	}
-	if boards[0].Board != "AllTix" || boards[0].Sprint != "2025-06" {
-		t.Errorf("membership = %+v, want AllTix/2025-06", boards[0])
+	if boards[0].Board != "AllTix" || boards[0].Sprint != "2025-06" || boards[0].Kind != BoardSprints {
+		t.Errorf("membership = %+v, want AllTix/2025-06 (sprints)", boards[0])
+	}
+	// The sprintless board reports its kind and no sprint.
+	if boards[1].Board != "AllTix Webticket" || boards[1].Sprint != "" || boards[1].Kind != BoardQuery {
+		t.Errorf("membership = %+v, want AllTix Webticket (query, no sprint)", boards[1])
 	}
 }
 

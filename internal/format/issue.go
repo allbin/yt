@@ -89,7 +89,7 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 		if i > 0 {
 			label = StyleLabel.Render("")
 		}
-		ew.printf("  %s %s %s %s\n", label, m.Board, StyleDim.Render("/"), m.Sprint)
+		ew.printf("  %s %s\n", label, boardMembership(m))
 	}
 
 	if v.Description != "" {
@@ -148,4 +148,21 @@ func issueTable(issues []youtrack.Issue) string {
 	}
 
 	return t.Render()
+}
+
+// boardMembership renders "Board / Sprint" for a sprint-based board and
+// "Board (by query)" or similar for a sprintless one.
+func boardMembership(m youtrack.BoardMembership) string {
+	switch {
+	case m.Sprint != "":
+		return m.Board + " " + StyleDim.Render("/") + " " + m.Sprint
+	case m.Kind == youtrack.BoardQuery:
+		return m.Board + " " + StyleDim.Render("(by query)")
+	case m.Kind == youtrack.BoardProjects:
+		return m.Board + " " + StyleDim.Render("(by project)")
+	case m.Kind == youtrack.BoardManual:
+		return m.Board + " " + StyleDim.Render("(added by hand)")
+	default:
+		return m.Board
+	}
 }
