@@ -10,12 +10,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var attachmentUploadName string
+
 var attachmentUploadCmd = &cobra.Command{
 	Use:   "upload <issueID> <file>...",
 	Short: "Attach files to an issue",
 	Long: `Upload one or more local files as attachments on a YouTrack issue. Each
-attachment is named after its file's base name. All files are sent in one
-request; nothing is uploaded if a file cannot be opened.
+attachment is named after its file's base name; --name stores a single file
+under another name. All files are opened before anything is sent, so a
+missing file uploads nothing.
 
 Reference an uploaded image in a description or comment as ![](name.png).`,
 	Example: `  # attach a screenshot
@@ -24,7 +27,10 @@ Reference an uploaded image in a description or comment as ![](name.png).`,
   # attach several files
   yt attachment upload PROJ-123 log.txt trace.json
 
-  # JSON output (the created attachments)
+  # store /tmp/out.csv as report.csv
+  yt attachment upload PROJ-123 /tmp/out.csv --name report.csv
+
+  # JSON output (id, name and size of each created attachment)
   yt attachment upload PROJ-123 screenshot.png --json`,
 	Args: cobra.MinimumNArgs(2),
 	RunE: runAttachmentUpload,
@@ -32,10 +38,14 @@ Reference an uploaded image in a description or comment as ![](name.png).`,
 
 func init() {
 	attachmentCmd.AddCommand(attachmentUploadCmd)
+	attachmentUploadCmd.Flags().StringVar(&attachmentUploadName, "name", "", "store the file under this name (one file only)")
 }
 
 func runAttachmentUpload(cmd *cobra.Command, args []string) (err error) {
 	issueID, paths := args[0], args[1:]
+	if attachmentUploadName != "" && len(paths) > 1 {
+		return fmt.Errorf("--name applies to one file, got %d", len(paths))
+	}
 
 	client, err := apiFactory()
 	if err != nil {
@@ -57,7 +67,11 @@ func runAttachmentUpload(cmd *cobra.Command, args []string) (err error) {
 			return openErr
 		}
 		opened = append(opened, f)
-		files = append(files, youtrack.UploadFile{Name: filepath.Base(p), Content: f})
+		name := filepath.Base(p)
+		if attachmentUploadName != "" {
+			name = attachmentUploadName
+		}
+		files = append(files, youtrack.UploadFile{Name: name, Content: f})
 	}
 
 	attachments, err := client.UploadAttachments(issueID, files)

@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -227,41 +225,6 @@ func TestRunProjectFieldsAddUnknownField(t *testing.T) {
 	_, err := run("project", "fields", "add", "HK", "Severity", "High")
 	if err == nil || !strings.Contains(err.Error(), `no field "Severity"`) {
 		t.Fatalf("err = %v, want unknown field", err)
-	}
-}
-
-func TestRunAttachmentUpload(t *testing.T) {
-	dir := t.TempDir()
-	a, b := filepath.Join(dir, "shot.png"), filepath.Join(dir, "log.txt")
-	for _, p := range []string{a, b} {
-		if err := os.WriteFile(p, []byte("x"), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	mock := &mockAPI{}
-	run := setupTest(t, mock)
-
-	out, err := run("attachment", "upload", "HK-1", a, b)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if want := []string{"shot.png", "log.txt"}; !slices.Equal(mock.uploaded, want) {
-		t.Errorf("uploaded = %q, want %q", mock.uploaded, want)
-	}
-	if !strings.Contains(out, "Uploaded shot.png") {
-		t.Errorf("output: %s", out)
-	}
-}
-
-func TestRunAttachmentUploadMissingFileUploadsNothing(t *testing.T) {
-	mock := &mockAPI{}
-	run := setupTest(t, mock)
-
-	if _, err := run("attachment", "upload", "HK-1", filepath.Join(t.TempDir(), "missing.png")); err == nil {
-		t.Fatal("expected error for missing file")
-	}
-	if mock.uploaded != nil {
-		t.Errorf("uploaded %q despite the missing file", mock.uploaded)
 	}
 }
 

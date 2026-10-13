@@ -1,6 +1,6 @@
 ---
 name: yt
-description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, see who moved which cards between states (e.g. for a standup), upload or download an attachment, add a value to a project field, or branch from an issue."
+description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, see who moved which cards between states (e.g. for a standup), attach a file or download an attachment, add a value to a project field, or branch from an issue."
 allowed-tools: Bash(yt *)
 ---
 
@@ -186,10 +186,12 @@ or attach local files:
 
 ```bash
 yt attachment download <ID> <filename> [--output /tmp/file.csv]
-yt attachment upload <ID> <file>... [--json]
+yt attachment upload <ID> <file>... [--name stored.csv] --json
 ```
 
-An uploaded image can be shown in a description or comment as `![](name.png)`.
+Upload answers with each attachment's id, name and size; `download` finds it
+by that name. An uploaded image can be shown in a description or comment as
+`![](name.png)`.
 
 ## Git branches
 
