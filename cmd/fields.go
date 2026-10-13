@@ -195,17 +195,3 @@ func flagFieldArgs(flags *pflag.FlagSet, pairs ...[2]string) []fieldArg {
 	}
 	return args
 }
-
-// tagCommand builds the command that adds and removes tags. Tag names stay
-// bare: YouTrack keeps braces as part of a new tag's name and rejects them on
-// untag, while a bare multi-word name parses up to the next keyword.
-func tagCommand(tags, removeTags []string) string {
-	var parts []string
-	for _, t := range tags {
-		parts = append(parts, "tag "+t)
-	}
-	for _, t := range removeTags {
-		parts = append(parts, "untag "+t)
-	}
-	return strings.Join(parts, " ")
-}

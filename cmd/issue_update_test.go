@@ -2,30 +2,61 @@ package cmd
 
 import (
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/allbin/yt/internal/youtrack"
 )
 
-func TestTagCommand(t *testing.T) {
-	tests := []struct {
-		name       string
-		tags       []string
-		removeTags []string
-		want       string
-	}{
-		{"empty", nil, nil, ""},
-		{"single", []string{"tech-debt"}, nil, "tag tech-debt"},
-		{"multi", []string{"tech-debt", "scheduler"}, nil, "tag tech-debt tag scheduler"},
-		{"remove", nil, []string{"obsolete"}, "untag obsolete"},
-		{"add_and_remove", []string{"new-tag"}, []string{"old-tag"}, "tag new-tag untag old-tag"},
-		{"multi_word", []string{"needs review"}, nil, "tag needs review"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := tagCommand(tt.tags, tt.removeTags); got != tt.want {
-				t.Errorf("tagCommand() = %q, want %q", got, tt.want)
-			}
-		})
-	}
+func TestResolveTags(t *testing.T) {
+	instance := []youtrack.Tag{{ID: "6-63", Name: "To be discussed"}, {ID: "6-1", Name: "QA"}}
+
+	t.Run("existing_by_whole_name_any_case", func(t *testing.T) {
+		mock := &mockAPI{tags: instance}
+		got, err := resolveTags(mock, []string{"to be discussed", "qa"}, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 2 || got[0].ID != "6-63" || got[1].ID != "6-1" {
+			t.Errorf("got %+v", got)
+		}
+		if len(mock.createdTags) != 0 {
+			t.Errorf("created %q, want none", mock.createdTags)
+		}
+	})
+
+	t.Run("substring_is_not_a_match", func(t *testing.T) {
+		mock := &mockAPI{tags: instance}
+		got, err := resolveTags(mock, []string{"discussed"}, true)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := []string{"discussed"}; !slices.Equal(mock.createdTags, want) {
+			t.Errorf("created %q, want %q", mock.createdTags, want)
+		}
+		if len(got) != 1 || got[0].Name != "discussed" {
+			t.Errorf("got %+v", got)
+		}
+	})
+
+	t.Run("missing_without_create_errors", func(t *testing.T) {
+		mock := &mockAPI{tags: instance}
+		_, err := resolveTags(mock, []string{"nope"}, false)
+		if err == nil || !strings.Contains(err.Error(), `no tag "nope"`) {
+			t.Errorf("err = %v", err)
+		}
+	})
+
+	t.Run("keeps_order_skips_blank", func(t *testing.T) {
+		mock := &mockAPI{tags: instance}
+		got, err := resolveTags(mock, []string{"QA", " ", "To be discussed"}, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(got) != 2 || got[0].ID != "6-1" || got[1].ID != "6-63" {
+			t.Errorf("got %+v", got)
+		}
+	})
 }
 
 func TestParseFieldArgs(t *testing.T) {

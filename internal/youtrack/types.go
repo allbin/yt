@@ -101,6 +101,7 @@ type Attachment struct {
 }
 
 type Tag struct {
+	ID   string `json:"id,omitempty"`
 	Name string `json:"name"`
 }
 
@@ -252,14 +253,20 @@ type AgileColumn struct {
 }
 
 type AgileColumnSettings struct {
-	Field   *struct{ Name string `json:"name"` } `json:"field"`
-	Columns []AgileColumn                         `json:"columns"`
+	Field *struct {
+		Name string `json:"name"`
+	} `json:"field"`
+	Columns []AgileColumn `json:"columns"`
 }
 
 type AgileSwimlaneSetting struct {
-	Enabled bool                                   `json:"enabled"`
-	Field   *struct{ Name string `json:"name"` }  `json:"field"`
-	Values  []struct{ Name string `json:"name"` } `json:"values"`
+	Enabled bool `json:"enabled"`
+	Field   *struct {
+		Name string `json:"name"`
+	} `json:"field"`
+	Values []struct {
+		Name string `json:"name"`
+	} `json:"values"`
 }
 
 type Agile struct {

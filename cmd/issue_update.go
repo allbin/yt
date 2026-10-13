@@ -9,20 +9,20 @@ import (
 )
 
 var (
-	updateState       string
-	updateAssignee    string
-	updatePriority    string
-	updateType        string
-	updateSubsystem   string
-	updateSummary     string
-	updateDescription string
-	updateTags        []string
-	updateRemoveTags  []string
+	updateState        string
+	updateAssignee     string
+	updatePriority     string
+	updateType         string
+	updateSubsystem    string
+	updateSummary      string
+	updateDescription  string
+	updateTags         []string
+	updateRemoveTags   []string
 	updateFields       []string
 	updateAddFields    []string
 	updateRemoveFields []string
-	updateBoard       string
-	updateSprint      string
+	updateBoard        string
+	updateSprint       string
 )
 
 var updateCmd = &cobra.Command{
@@ -43,6 +43,11 @@ a login or a name.
 Values are checked against the field's allowed values before anything is
 written ("yt project fields PROJ" lists them), and summary, description and
 fields are saved in one request: either all of them change or none do.
+
+--tag and --remove-tag name tags; the name is matched whole, ignoring case,
+against the instance's tags, and a tag that does not exist yet is created.
+Nothing goes through YouTrack's command language, so multi-word values need
+only shell quoting.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -83,8 +88,8 @@ After a successful update the issue is fetched and displayed.`,
   # set arbitrary custom field
   yt issue update PROJ-123 --field "Severity=Critical"
 
-  # add tags
-  yt issue update PROJ-123 --tag tech-debt --tag scheduler
+  # add tags, including a multi-word one
+  yt issue update PROJ-123 --tag tech-debt --tag "To be discussed"
 
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
@@ -95,7 +100,7 @@ After a successful update the issue is fetched and displayed.`,
   # place the issue on a board's current sprint
   yt issue update AX-812 --board AllTix
 
-  # combine REST and command fields
+  # several changes at once
   yt issue update PROJ-123 -S "New title" -s "In Progress" -a me`,
 	Args: cobra.ExactArgs(1),
 	RunE: runIssueUpdate,
@@ -110,8 +115,8 @@ func init() {
 	updateCmd.Flags().StringVar(&updateSubsystem, "subsystem", "", "set subsystem, replacing current values (see --add-field)")
 	updateCmd.Flags().StringVarP(&updateSummary, "summary", "S", "", "set issue summary")
 	updateCmd.Flags().StringVarP(&updateDescription, "description", "d", "", "set issue description")
-	updateCmd.Flags().StringSliceVar(&updateTags, "tag", nil, "add tag (repeatable)")
-	updateCmd.Flags().StringSliceVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
+	updateCmd.Flags().StringArrayVar(&updateTags, "tag", nil, "add tag (repeatable)")
+	updateCmd.Flags().StringArrayVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
 	updateCmd.Flags().StringArrayVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringArrayVar(&updateAddFields, "add-field", nil, `add a value to a multi-value field, as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringArrayVar(&updateRemoveFields, "remove-field", nil, `remove a value from a multi-value field, as "Name=Value" (repeatable)`)
@@ -153,10 +158,10 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	command := tagCommand(updateTags, updateRemoveTags)
+	tagsChanged := len(updateTags) > 0 || len(updateRemoveTags) > 0
 	boardChanged := cmd.Flags().Changed("board")
 
-	if len(restFields) == 0 && changes.empty() && command == "" && !boardChanged {
+	if len(restFields) == 0 && changes.empty() && !tagsChanged && !boardChanged {
 		return fmt.Errorf("no fields to update; use --summary, --description, --state, --assignee, --priority, --type, --subsystem, --field, --add-field, --remove-field, --tag, --remove-tag, or --board")
 	}
 
@@ -167,6 +172,14 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
+	addTags, err := resolveTags(client, updateTags, true)
+	if err != nil {
+		return err
+	}
+	removeTags, err := resolveTags(client, updateRemoveTags, false)
+	if err != nil {
+		return err
+	}
 
 	// Summary, description and custom fields go in one request: the server
 	// applies all of them or none.
@@ -176,10 +189,8 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	if command != "" {
-		if err := client.UpdateIssue(id, command); err != nil {
-			return err
-		}
+	if err := applyTags(client, id, addTags, removeTags); err != nil {
+		return err
 	}
 
 	if boardChanged {

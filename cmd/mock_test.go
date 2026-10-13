@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"io"
+	"strings"
 
 	"github.com/allbin/yt/internal/youtrack"
 )
@@ -17,7 +18,6 @@ type mockAPI struct {
 	issueErr       error
 	boardErr       error
 	stateSet       string
-	command        string
 	updatedFields  map[string]string
 	updateErr      error
 	fieldValues    []youtrack.BundleValue
@@ -40,7 +40,14 @@ type mockAPI struct {
 	addedBundle   []string // "field|value"
 	uploaded      []string // file names
 	createdFields []youtrack.FieldUpdate
+	createdTagIDs []string
 	createCalled  bool
+
+	tags        []youtrack.Tag // the instance's tags
+	createdTags []string
+	tagged      []string // "issueID|tagID"
+	untagged    []string // "issueID|tagID"
+	tagErr      error
 
 	createdDescription string
 	addedComment       string
@@ -64,10 +71,6 @@ func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)  { return m.bo
 func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error) { return m.board, m.boardErr }
 func (m *mockAPI) ListProjects() ([]youtrack.Project, error)       { return m.projects, nil }
 func (m *mockAPI) ResolveUser(q string) (string, error)            { return q, nil }
-func (m *mockAPI) UpdateIssue(_ string, cmd string) error {
-	m.command = cmd
-	return m.updateErr
-}
 func (m *mockAPI) UpdateIssueFields(_ string, core map[string]string, custom []youtrack.FieldUpdate) error {
 	m.updatedFields = core
 	m.setFields = custom
@@ -78,11 +81,40 @@ func (m *mockAPI) AddComment(_ string, text string) (*youtrack.Comment, error) {
 	m.addedComment = text
 	return &youtrack.Comment{ID: "mock-comment-1", Text: "mock"}, nil
 }
-func (m *mockAPI) CreateIssue(_, summary, description string, fields []youtrack.FieldUpdate) (*youtrack.Issue, error) {
+func (m *mockAPI) CreateIssue(n youtrack.NewIssue) (*youtrack.Issue, error) {
 	m.createCalled = true
-	m.createdDescription = description
-	m.createdFields = fields
-	return &youtrack.Issue{IDReadable: "PROJ-999", Summary: summary}, nil
+	m.createdDescription = n.Description
+	m.createdFields = n.Fields
+	m.createdTagIDs = n.TagIDs
+	return &youtrack.Issue{IDReadable: "PROJ-999", Summary: n.Summary}, nil
+}
+
+// ListTags matches the server: a case-insensitive substring query.
+func (m *mockAPI) ListTags(query string) ([]youtrack.Tag, error) {
+	var out []youtrack.Tag
+	for _, t := range m.tags {
+		if strings.Contains(strings.ToLower(t.Name), strings.ToLower(query)) {
+			out = append(out, t)
+		}
+	}
+	return out, m.tagErr
+}
+func (m *mockAPI) CreateTag(name string) (*youtrack.Tag, error) {
+	if m.tagErr != nil {
+		return nil, m.tagErr
+	}
+	tag := youtrack.Tag{ID: "tag-" + name, Name: name}
+	m.tags = append(m.tags, tag)
+	m.createdTags = append(m.createdTags, name)
+	return &tag, nil
+}
+func (m *mockAPI) TagIssue(issueID, tagID string) error {
+	m.tagged = append(m.tagged, issueID+"|"+tagID)
+	return m.tagErr
+}
+func (m *mockAPI) UntagIssue(issueID, tagID string) error {
+	m.untagged = append(m.untagged, issueID+"|"+tagID)
+	return m.tagErr
 }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) {
 	return m.states, nil

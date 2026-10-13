@@ -75,6 +75,24 @@ func (c *Client) ListLinkTypes() ([]LinkType, error) {
 	return types, nil
 }
 
+// runCommand applies a YouTrack command query to a single issue. Links are
+// the one write still made this way: a link phrase plus an issue ID has no
+// multi-word value for the command parser to misread.
+func (c *Client) runCommand(query, issueID string) error {
+	body := struct {
+		Query  string `json:"query"`
+		Issues []struct {
+			IDReadable string `json:"idReadable"`
+		} `json:"issues"`
+	}{
+		Query: query,
+		Issues: []struct {
+			IDReadable string `json:"idReadable"`
+		}{{IDReadable: issueID}},
+	}
+	return c.post("/api/commands", body)
+}
+
 // CreateLink links sourceID to targetID using the given directed phrase via the
 // commands API, which infers direction from the phrase. Adding an existing link
 // is a no-op on the server side.

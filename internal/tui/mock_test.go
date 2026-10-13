@@ -29,15 +29,16 @@ func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error) { return m.bo
 func (m *mockAPI) ListProjects() ([]youtrack.Project, error)       { return nil, nil }
 func (m *mockAPI) CurrentUser() (*youtrack.User, error)            { return nil, nil }
 func (m *mockAPI) ResolveUser(string) (string, error)              { return "", nil }
-func (m *mockAPI) UpdateIssue(string, string) error                { return nil }
 func (m *mockAPI) UpdateIssueFields(string, map[string]string, []youtrack.FieldUpdate) error {
 	return nil
 }
-func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error) { return m.comments, nil }
-func (m *mockAPI) CreateIssue(string, string, string, []youtrack.FieldUpdate) (*youtrack.Issue, error) {
-	return nil, nil
-}
-func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error) { return nil, nil }
+func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)        { return m.comments, nil }
+func (m *mockAPI) CreateIssue(youtrack.NewIssue) (*youtrack.Issue, error) { return nil, nil }
+func (m *mockAPI) ListTags(string) ([]youtrack.Tag, error)                { return nil, nil }
+func (m *mockAPI) CreateTag(string) (*youtrack.Tag, error)                { return nil, nil }
+func (m *mockAPI) TagIssue(string, string) error                          { return nil }
+func (m *mockAPI) UntagIssue(string, string) error                        { return nil }
+func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error)   { return nil, nil }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) {
 	return m.states, nil
 }

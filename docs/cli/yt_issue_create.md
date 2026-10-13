@@ -15,13 +15,14 @@ with the same name to set several values on a multi-value field. Values are
 checked against the project's allowed values ("yt project fields PROJ") and
 sent with the create request, so a bad value creates nothing.
 
-Use --tag to tag the issue; a tag that does not exist yet is created. Use
---link "relation=ID" to link it to other issues ("yt link types" lists the
-relations).
+Use --tag to tag the issue: the name is matched whole, ignoring case, against
+the instance's tags, and a tag that does not exist yet is created. Tags go in
+the create request with the fields. Use --link "relation=ID" to link it to
+other issues ("yt link types" lists the relations).
 
-Tags, links and board placement are applied after the issue exists. If one of
-them fails, the created issue is still printed and the error names its ID:
-finish it with "yt issue update" or "yt link" rather than creating it again.
+Links and board placement are applied after the issue exists. If one of them
+fails, the created issue is still printed and the error names its ID: finish
+it with "yt issue update" or "yt link" rather than creating it again.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -65,8 +66,8 @@ yt issue create [flags]
   # link to other issues on creation
   yt issue create -p PROJ -s "Follow-up" --link depends-on=PROJ-12 --link relates=PROJ-7
 
-  # create with tags
-  yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
+  # create with tags, including a multi-word one
+  yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t "To be discussed"
 
   # place the new issue on a board's current sprint
   yt issue create -p AX -s "Subtask" --board AllTix
@@ -97,7 +98,7 @@ yt issue create [flags]
       --sprint string        sprint for --board (default: current)
       --subsystem string     set subsystem
   -s, --summary string       issue summary (required)
-  -t, --tag strings          add tag (repeatable)
+  -t, --tag stringArray      add tag (repeatable)
       --type string          set issue type
 ```
 

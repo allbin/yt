@@ -61,8 +61,8 @@ func TestRunIssueUpdateMultiWordValues(t *testing.T) {
 		{Type: "SingleEnumIssueCustomField", Name: "Type", Value: named("User Story")},
 		{Type: "MultiOwnedIssueCustomField", Name: "Subsystem", Value: []any{named("Management UI")}},
 	})
-	if mock.command != "" {
-		t.Errorf("fields must not go through the command API, got %q", mock.command)
+	if len(mock.tagged) != 0 {
+		t.Errorf("fields must not touch tags, got %q", mock.tagged)
 	}
 }
 
@@ -152,8 +152,8 @@ func TestRunIssueCreateSendsFieldsWithCreate(t *testing.T) {
 		{Type: "SingleUserIssueCustomField", Name: "Assignee", Value: map[string]any{"login": "jdoe"}},
 		{Type: "MultiEnumIssueCustomField", Name: "Customer", Value: []any{named("LTS"), named("VL")}},
 	})
-	if mock.command != "" {
-		t.Errorf("fields must not go through the command API, got %q", mock.command)
+	if len(mock.tagged) != 0 {
+		t.Errorf("fields must not touch tags, got %q", mock.tagged)
 	}
 }
 

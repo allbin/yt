@@ -36,27 +36,6 @@ func (c *Client) GetIssue(id string) (*Issue, error) {
 	return &issue, nil
 }
 
-// runCommand applies a YouTrack command query to a single issue.
-func (c *Client) runCommand(query, issueID string) error {
-	body := struct {
-		Query  string `json:"query"`
-		Issues []struct {
-			IDReadable string `json:"idReadable"`
-		} `json:"issues"`
-	}{
-		Query:  query,
-		Issues: []struct{ IDReadable string `json:"idReadable"` }{{IDReadable: issueID}},
-	}
-	return c.post("/api/commands", body)
-}
-
-func (c *Client) UpdateIssue(id string, command string) error {
-	if err := c.runCommand(command, id); err != nil {
-		return fmt.Errorf("update %s: %w", id, err)
-	}
-	return nil
-}
-
 // UpdateIssueFields writes core fields (summary, description) and custom
 // fields in one request, so the server applies all or none of them.
 func (c *Client) UpdateIssueFields(id string, core map[string]string, custom []FieldUpdate) error {
@@ -73,21 +52,40 @@ func (c *Client) UpdateIssueFields(id string, core map[string]string, custom []F
 	return nil
 }
 
-// CreateIssue creates an issue with its core and custom fields in one
-// request, so a rejected field value creates nothing. Tags go through the
-// command API afterwards: the REST create body cannot reference a tag by name.
-func (c *Client) CreateIssue(project, summary, description string, fields []FieldUpdate) (*Issue, error) {
-	body := struct {
-		Project      struct{ ShortName string `json:"shortName"` } `json:"project"`
-		Summary      string                                        `json:"summary"`
-		Description  string                                        `json:"description,omitempty"`
-		CustomFields []FieldUpdate                                 `json:"customFields,omitempty"`
-	}{
-		Summary:      summary,
-		Description:  description,
-		CustomFields: fields,
+// NewIssue is what CreateIssue sends: the issue's core fields, its custom
+// fields and the IDs of the tags to apply.
+type NewIssue struct {
+	Project     string
+	Summary     string
+	Description string
+	Fields      []FieldUpdate
+	TagIDs      []string
+}
+
+// CreateIssue creates an issue with its core fields, custom fields and tags
+// in one request, so a rejected value creates nothing. Tags are referenced by
+// ID: the create body cannot name a tag.
+func (c *Client) CreateIssue(n NewIssue) (*Issue, error) {
+	type idRef struct {
+		ID string `json:"id"`
 	}
-	body.Project.ShortName = project
+	body := struct {
+		Project struct {
+			ShortName string `json:"shortName"`
+		} `json:"project"`
+		Summary      string        `json:"summary"`
+		Description  string        `json:"description,omitempty"`
+		CustomFields []FieldUpdate `json:"customFields,omitempty"`
+		Tags         []idRef       `json:"tags,omitempty"`
+	}{
+		Summary:      n.Summary,
+		Description:  n.Description,
+		CustomFields: n.Fields,
+	}
+	body.Project.ShortName = n.Project
+	for _, id := range n.TagIDs {
+		body.Tags = append(body.Tags, idRef{ID: id})
+	}
 
 	path := "/api/issues?fields=" + url.QueryEscape(issueFields)
 	data, err := c.postJSON(path, body)

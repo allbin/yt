@@ -20,6 +20,11 @@ Values are checked against the field's allowed values before anything is
 written ("yt project fields PROJ" lists them), and summary, description and
 fields are saved in one request: either all of them change or none do.
 
+--tag and --remove-tag name tags; the name is matched whole, ignoring case,
+against the instance's tags, and a tag that does not exist yet is created.
+Nothing goes through YouTrack's command language, so multi-word values need
+only shell quoting.
+
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
 
@@ -67,8 +72,8 @@ yt issue update <id> [flags]
   # set arbitrary custom field
   yt issue update PROJ-123 --field "Severity=Critical"
 
-  # add tags
-  yt issue update PROJ-123 --tag tech-debt --tag scheduler
+  # add tags, including a multi-word one
+  yt issue update PROJ-123 --tag tech-debt --tag "To be discussed"
 
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
@@ -79,7 +84,7 @@ yt issue update <id> [flags]
   # place the issue on a board's current sprint
   yt issue update AX-812 --board AllTix
 
-  # combine REST and command fields
+  # several changes at once
   yt issue update PROJ-123 -S "New title" -s "In Progress" -a me
 ```
 
@@ -94,12 +99,12 @@ yt issue update <id> [flags]
   -h, --help                       help for update
   -p, --priority string            set priority
       --remove-field stringArray   remove a value from a multi-value field, as "Name=Value" (repeatable)
-      --remove-tag strings         remove tag (repeatable)
+      --remove-tag stringArray     remove tag (repeatable)
       --sprint string              sprint for --board (default: current)
   -s, --state string               set issue state
       --subsystem string           set subsystem, replacing current values (see --add-field)
   -S, --summary string             set issue summary
-      --tag strings                add tag (repeatable)
+      --tag stringArray            add tag (repeatable)
   -t, --type string                set issue type
 ```
 

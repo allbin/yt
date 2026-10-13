@@ -41,13 +41,14 @@ with the same name to set several values on a multi-value field. Values are
 checked against the project's allowed values ("yt project fields PROJ") and
 sent with the create request, so a bad value creates nothing.
 
-Use --tag to tag the issue; a tag that does not exist yet is created. Use
---link "relation=ID" to link it to other issues ("yt link types" lists the
-relations).
+Use --tag to tag the issue: the name is matched whole, ignoring case, against
+the instance's tags, and a tag that does not exist yet is created. Tags go in
+the create request with the fields. Use --link "relation=ID" to link it to
+other issues ("yt link types" lists the relations).
 
-Tags, links and board placement are applied after the issue exists. If one of
-them fails, the created issue is still printed and the error names its ID:
-finish it with "yt issue update" or "yt link" rather than creating it again.
+Links and board placement are applied after the issue exists. If one of them
+fails, the created issue is still printed and the error names its ID: finish
+it with "yt issue update" or "yt link" rather than creating it again.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -83,8 +84,8 @@ workflow. When --board is also given it overrides the parent's board.`,
   # link to other issues on creation
   yt issue create -p PROJ -s "Follow-up" --link depends-on=PROJ-12 --link relates=PROJ-7
 
-  # create with tags
-  yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t scheduler
+  # create with tags, including a multi-word one
+  yt issue create -p PROJ -s "Fix stale state" -t tech-debt -t "To be discussed"
 
   # place the new issue on a board's current sprint
   yt issue create -p AX -s "Subtask" --board AllTix
@@ -109,7 +110,7 @@ func init() {
 	createCmd.Flags().StringVar(&createType, "type", "", "set issue type")
 	createCmd.Flags().StringVar(&createPriority, "priority", "", "set priority")
 	createCmd.Flags().StringVar(&createAssignee, "assignee", "", "set assignee (supports 'me')")
-	createCmd.Flags().StringSliceVarP(&createTags, "tag", "t", nil, "add tag (repeatable)")
+	createCmd.Flags().StringArrayVarP(&createTags, "tag", "t", nil, "add tag (repeatable)")
 	createCmd.Flags().StringArrayVar(&createFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	createCmd.Flags().StringArrayVar(&createLinks, "link", nil, `link to an issue as "relation=ID", e.g. depends-on=AX-3 (repeatable)`)
 	createCmd.Flags().StringVar(&createBoard, "board", "", "add the issue to this agile board")
@@ -147,9 +148,18 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	command := tagCommand(createTags, nil)
+	tags, err := resolveTags(client, createTags, true)
+	if err != nil {
+		return err
+	}
 
-	issue, err := client.CreateIssue(createProject, createSummary, description, updates)
+	issue, err := client.CreateIssue(youtrack.NewIssue{
+		Project:     createProject,
+		Summary:     createSummary,
+		Description: description,
+		Fields:      updates,
+		TagIDs:      tagIDs(tags),
+	})
 	if err != nil {
 		return err
 	}
@@ -157,7 +167,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	// From here on the issue exists. A failed step still prints it and names
 	// its ID, so the caller finishes it with update instead of creating a
 	// duplicate.
-	issue, stepErr := completeCreate(client, issue, command, links)
+	issue, stepErr := completeCreate(client, issue, links)
 
 	w := cmd.OutOrStdout()
 	if jsonOutput {
@@ -222,13 +232,13 @@ func resolveLinkArgs(client youtrack.API, raw []string) ([]linkArg, error) {
 	return links, nil
 }
 
-// completeCreate applies tags, links and board placement to a newly created
+// completeCreate applies links and board placement to a newly created
 // issue. It always returns the best-known state of the issue, alongside the
 // first step that failed.
-func completeCreate(client youtrack.API, created *youtrack.Issue, command string, links []linkArg) (*youtrack.Issue, error) {
+func completeCreate(client youtrack.API, created *youtrack.Issue, links []linkArg) (*youtrack.Issue, error) {
 	id := created.IDReadable
-	placed, err := applyCreateSteps(client, id, command, links)
-	if command == "" && !placed && createParent == "" && len(links) == 0 && err == nil {
+	placed, err := applyCreateSteps(client, id, links)
+	if !placed && createParent == "" && len(links) == 0 && err == nil {
 		return created, nil
 	}
 
@@ -247,12 +257,7 @@ func completeCreate(client youtrack.API, created *youtrack.Issue, command string
 
 // applyCreateSteps runs the post-create steps in order, stopping at the first
 // failure. placed reports whether the issue landed on a board.
-func applyCreateSteps(client youtrack.API, id, command string, links []linkArg) (placed bool, err error) {
-	if command != "" {
-		if err := client.UpdateIssue(id, command); err != nil {
-			return false, fmt.Errorf("add tags: %w", err)
-		}
-	}
+func applyCreateSteps(client youtrack.API, id string, links []linkArg) (placed bool, err error) {
 	for _, l := range links {
 		if err := client.CreateLink(id, l.phrase, l.target); err != nil {
 			return false, fmt.Errorf("link %s %s: %w", l.phrase, l.target, err)

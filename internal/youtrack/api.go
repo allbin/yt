@@ -13,11 +13,14 @@ type API interface {
 	ListProjects() ([]Project, error)
 	CurrentUser() (*User, error)
 	ResolveUser(query string) (string, error)
-	UpdateIssue(id string, command string) error
 	UpdateIssueFields(id string, core map[string]string, custom []FieldUpdate) error
 	ListComments(issueID string) ([]Comment, error)
 	AddComment(issueID, text string) (*Comment, error)
-	CreateIssue(project, summary, description string, fields []FieldUpdate) (*Issue, error)
+	CreateIssue(n NewIssue) (*Issue, error)
+	ListTags(query string) ([]Tag, error)
+	CreateTag(name string) (*Tag, error)
+	TagIssue(issueID, tagID string) error
+	UntagIssue(issueID, tagID string) error
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
 	GetFieldValues(issueID, fieldName string) ([]BundleValue, error)

@@ -111,13 +111,16 @@ yt project fields PROJ --json
 ```
 
 Field values are checked against that list before anything is written, and a
-typo errors with the allowed values. Quote multi-word values
-(`--field "Type=User Story"`); no braces. On a multi-value field (`owned[]`,
-`enum[]`), repeat `--field` with the same name to set several values — the list
-*replaces* the current values, and so do `--subsystem` and the other shorthands.
-To keep existing values, use `--add-field "Name=Value"` / `--remove-field` on
-`update`. `--field "Name="` clears a field. Summary, description, state and
-fields are saved in one request, so a rejected value changes nothing. On `create`, `-t` is `--tag`; the type is `--type`.
+typo errors with the allowed values. Every value and tag goes through the REST
+API, never YouTrack's command language, so a multi-word value needs only shell
+quoting (`--field "Type=User Story"`, `--tag "To be discussed"`); braces would
+become part of the value. On a multi-value field (`owned[]`, `enum[]`), repeat
+`--field` with the same name to set several values — the list *replaces* the
+current values, and so do `--subsystem` and the other shorthands. To keep
+existing values, use `--add-field "Name=Value"` / `--remove-field` on `update`.
+`--field "Name="` clears a field. Summary, description, state and fields are
+saved in one request, so a rejected value changes nothing. On `create`, `-t`
+is `--tag`; the type is `--type`.
 
 A value missing from a field's bundle must be added before it can be set.
 Bundles are often shared across projects and need admin rights, so ask before
@@ -127,12 +130,14 @@ adding:
 yt project fields add PROJ Customer LTVB
 ```
 
-Tags are the exception — YouTrack creates them on demand, so `--tag` on both
-`create` and `update` accepts a tag that does not exist yet.
+Tags are the exception: `--tag` matches the whole name against the instance's
+tags ignoring case, and creates the tag when none matches, so check the
+spelling of a new tag before writing it. `--remove-tag` of a tag the issue
+does not carry is a no-op.
 
-Custom fields go with the create request itself, so a bad value creates
-nothing. If `create` prints an issue but exits non-zero, the issue exists and
-only a follow-up step (tags, links, board) failed. Finish it with
+Custom fields and tags go with the create request itself, so a bad value
+creates nothing. If `create` prints an issue but exits non-zero, the issue
+exists and only a follow-up step (links, board) failed. Finish it with
 `yt issue update <ID>` or `yt link`; running `create` again makes a duplicate.
 
 For long or multi-line text, `-d/--description` and `-m/--message` accept `@path`

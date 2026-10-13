@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -108,12 +109,20 @@ func TestRunIssueComment(t *testing.T) {
 func TestRunIssueUpdateWithTags(t *testing.T) {
 	mock := &mockAPI{
 		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+		tags:  []youtrack.Tag{{ID: "6-1", Name: "tech-debt"}, {ID: "6-63", Name: "To be discussed"}},
 	}
 	run := setupTest(t, mock)
 
-	out, err := run("issue", "update", "PROJ-123", "--tag", "tech-debt", "--tag", "scheduler")
+	out, err := run("issue", "update", "PROJ-123", "--tag", "tech-debt", "--tag", "to be discussed", "--tag", "scheduler")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	// Existing tags by ID, whole-name case-insensitive; only the unknown one is created.
+	if want := []string{"PROJ-123|6-1", "PROJ-123|6-63", "PROJ-123|tag-scheduler"}; !slices.Equal(mock.tagged, want) {
+		t.Errorf("tagged = %q, want %q", mock.tagged, want)
+	}
+	if want := []string{"scheduler"}; !slices.Equal(mock.createdTags, want) {
+		t.Errorf("created tags = %q, want %q", mock.createdTags, want)
 	}
 	if !strings.Contains(out, "PROJ-123") {
 		t.Errorf("output missing issue ID: %s", out)
@@ -123,16 +132,52 @@ func TestRunIssueUpdateWithTags(t *testing.T) {
 func TestRunIssueUpdateWithRemoveTag(t *testing.T) {
 	mock := &mockAPI{
 		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+		tags:  []youtrack.Tag{{ID: "6-9", Name: "obsolete"}},
 	}
 	run := setupTest(t, mock)
 
-	out, err := run("issue", "update", "PROJ-123", "--remove-tag", "obsolete")
+	out, err := run("issue", "update", "PROJ-123", "--remove-tag", "Obsolete")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if want := []string{"PROJ-123|6-9"}; !slices.Equal(mock.untagged, want) {
+		t.Errorf("untagged = %q, want %q", mock.untagged, want)
 	}
 	if !strings.Contains(out, "PROJ-123") {
 		t.Errorf("output missing issue ID: %s", out)
 	}
+}
+
+func TestRunIssueUpdateRemoveUnknownTag(t *testing.T) {
+	mock := &mockAPI{
+		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "--remove-tag", "nope")
+	if err == nil || !strings.Contains(err.Error(), `no tag "nope"`) {
+		t.Fatalf("err = %v, want unknown tag", err)
+	}
+	if len(mock.createdTags) != 0 || len(mock.untagged) != 0 {
+		t.Errorf("--remove-tag wrote: created %q, untagged %q", mock.createdTags, mock.untagged)
+	}
+}
+
+func TestRunIssueUpdateMultiWordType(t *testing.T) {
+	mock := &mockAPI{
+		issue:       &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
+		issueFields: hkSchema(),
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "update", "PROJ-123", "-t", "User Story", "--field", "Subsystem=Management UI")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	assertFields(t, mock.setFields, []youtrack.FieldUpdate{
+		{Type: "SingleEnumIssueCustomField", Name: "Type", Value: named("User Story")},
+		{Type: "MultiOwnedIssueCustomField", Name: "Subsystem", Value: []any{named("Management UI")}},
+	})
 }
 
 func TestRunIssueUpdateSummary(t *testing.T) {
@@ -148,8 +193,8 @@ func TestRunIssueUpdateSummary(t *testing.T) {
 	if mock.updatedFields["summary"] != "New title" {
 		t.Errorf("summary = %q, want %q", mock.updatedFields["summary"], "New title")
 	}
-	if mock.command != "" {
-		t.Errorf("command should be empty, got %q", mock.command)
+	if len(mock.tagged) != 0 {
+		t.Errorf("no tags should be touched, got %q", mock.tagged)
 	}
 	if !strings.Contains(out, "PROJ-123") {
 		t.Errorf("output missing issue ID: %s", out)
@@ -169,8 +214,8 @@ func TestRunIssueUpdateDescription(t *testing.T) {
 	if mock.updatedFields["description"] != "Updated body" {
 		t.Errorf("description = %q, want %q", mock.updatedFields["description"], "Updated body")
 	}
-	if mock.command != "" {
-		t.Errorf("command should be empty, got %q", mock.command)
+	if len(mock.tagged) != 0 {
+		t.Errorf("no tags should be touched, got %q", mock.tagged)
 	}
 }
 
@@ -206,8 +251,8 @@ func TestRunIssueUpdateStateOnly(t *testing.T) {
 	assertFields(t, mock.setFields, []youtrack.FieldUpdate{
 		{Type: "StateIssueCustomField", Name: "State", Value: named("In Progress")},
 	})
-	if mock.command != "" {
-		t.Errorf("command should be empty, got %q", mock.command)
+	if len(mock.tagged) != 0 {
+		t.Errorf("no tags should be touched, got %q", mock.tagged)
 	}
 	if !strings.Contains(out, "PROJ-123") {
 		t.Errorf("output missing issue ID: %s", out)
@@ -276,8 +321,8 @@ func TestRunIssueCreateNoFieldsSkipsUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if mock.command != "" {
-		t.Errorf("expected no update command, got %q", mock.command)
+	if len(mock.tagged) != 0 || len(mock.createdTagIDs) != 0 {
+		t.Errorf("expected no tag writes, got %q / %q", mock.tagged, mock.createdTagIDs)
 	}
 }
 

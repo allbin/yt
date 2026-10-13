@@ -156,7 +156,7 @@ func TestCreateIssueSendsCustomFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := NewClient(srv.URL, "token").CreateIssue("HK", "S", "", []FieldUpdate{u}); err != nil {
+	if _, err := NewClient(srv.URL, "token").CreateIssue(NewIssue{Project: "HK", Summary: "S", Fields: []FieldUpdate{u}}); err != nil {
 		t.Fatal(err)
 	}
 	want := `[{"$type":"SingleEnumIssueCustomField","name":"Type","value":{"name":"User Story"}}]`
