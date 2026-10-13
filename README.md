@@ -39,6 +39,7 @@ yt issue comment PROJ-123 -m "Started working on this"
 # List and filter issues
 yt issue list -p PROJ -s "In Progress" -a me
 yt issue list -q "tag: {Ready for QA} sort by: updated desc"
+yt issue list -p PROJ -n 500 --json --compact   # one small object per issue
 
 # Agile boards
 yt board list
