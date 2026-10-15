@@ -148,9 +148,11 @@ really meant. Tags are read back after writing, so a zero exit means they are
 on the issue. `--remove-tag` of a tag the issue does not carry is a no-op.
 
 Custom fields and existing tags go with the create request itself, so a bad
-value creates nothing, not even a `--create-tag` tag. If `create` prints an issue but exits non-zero, the issue
-exists and only a follow-up step (links, board) failed. Finish it with
-`yt issue update <ID>` or `yt link`; running `create` again makes a duplicate.
+value creates nothing, not even a `--create-tag` tag. If `create` prints an
+issue but exits non-zero, the issue exists and a follow-up step (a
+`--create-tag` tag, links, board) failed; the error names each one. Finish it
+with `yt issue update <ID>` or `yt link`; running `create` again makes a
+duplicate.
 
 For long or multi-line text, `-d/--description` and `-m/--message` accept `@path`
 to read a file and `-` to read stdin, which avoids shell mangling:

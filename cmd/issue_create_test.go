@@ -92,6 +92,26 @@ func TestRunIssueCreateRejectedCreatesNoTag(t *testing.T) {
 	}
 }
 
+func TestRunIssueCreateTagFailureStillLinks(t *testing.T) {
+	mock := &mockAPI{
+		issue:        &youtrack.Issue{IDReadable: "PROJ-999"},
+		linkTypes:    mockLinkTypes,
+		createTagErr: fmt.Errorf("no permission to create tags"),
+	}
+	run := setupTest(t, mock)
+
+	_, err := run("issue", "create", "-p", "PROJ", "-s", "Test", "-t", "new", "--create-tag", "--link", "depends-on=PROJ-3")
+	msg := formatError(err)
+	for _, want := range []string{"PROJ-999 was created", "no permission to create tags"} {
+		if !strings.Contains(msg, want) {
+			t.Errorf("error %q missing %q", msg, want)
+		}
+	}
+	if len(mock.createdLinks) != 1 {
+		t.Errorf("links = %q, want the link applied despite the tag failure", mock.createdLinks)
+	}
+}
+
 func TestRunIssueCreateMultiWordTypeInCreateBody(t *testing.T) {
 	fake, api := newFakeServer(t)
 

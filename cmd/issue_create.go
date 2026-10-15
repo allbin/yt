@@ -51,7 +51,8 @@ created and applied once the issue exists. All are read back afterwards.
 Use --link "relation=ID" to link it to other issues ("yt link types" lists
 the relations).
 
-Links and board placement are applied after the issue exists. If one of them
+Tags made by --create-tag, links and board placement are applied after the
+issue exists. If one of them
 fails, the created issue is still printed and the error names its ID: finish
 it with "yt issue update" or "yt link" rather than creating it again.
 
@@ -239,21 +240,21 @@ func resolveLinkArgs(client youtrack.API, raw []string) ([]linkArg, error) {
 	return links, nil
 }
 
-// completeCreate creates and applies the --create-tag tags, then links and
-// board placement, on a newly created issue. New tags wait for the issue, so
+// completeCreate creates and applies the --create-tag tags, and applies
+// links and board placement, on a newly created issue. New tags wait for the issue, so
 // a rejected create leaves none behind. It always returns the best-known
 // state of the issue and the tags it created, alongside the first step that
 // failed.
 func completeCreate(client youtrack.API, created *youtrack.Issue, links []linkArg, newTags []string) (*youtrack.Issue, []youtrack.Tag, error) {
 	id := created.IDReadable
+	// A failed tag step does not hold back links and board placement: each
+	// failure is reported, and the rest of the issue is finished.
 	tags, err := createMissingTags(client, newTags)
 	if err == nil {
 		err = applyTags(client, id, tags, nil)
 	}
-	placed := false
-	if err == nil {
-		placed, err = applyCreateSteps(client, id, links)
-	}
+	placed, stepErr := applyCreateSteps(client, id, links)
+	err = errors.Join(err, stepErr)
 	if !placed && createParent == "" && len(links) == 0 && len(newTags) == 0 && err == nil {
 		return created, tags, nil
 	}

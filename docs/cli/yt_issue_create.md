@@ -24,7 +24,8 @@ created and applied once the issue exists. All are read back afterwards.
 Use --link "relation=ID" to link it to other issues ("yt link types" lists
 the relations).
 
-Links and board placement are applied after the issue exists. If one of them
+Tags made by --create-tag, links and board placement are applied after the
+issue exists. If one of them
 fails, the created issue is still printed and the error names its ID: finish
 it with "yt issue update" or "yt link" rather than creating it again.
 
