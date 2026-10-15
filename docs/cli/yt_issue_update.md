@@ -20,10 +20,12 @@ Values are checked against the field's allowed values before anything is
 written ("yt project fields PROJ" lists them), and summary, description and
 fields are saved in one request: either all of them change or none do.
 
---tag and --remove-tag name tags; the name is matched whole, ignoring case,
-against the instance's tags, and a tag that does not exist yet is created.
-Nothing goes through YouTrack's command language, so multi-word values need
-only shell quoting.
+--tag and --remove-tag name tags by their whole name: the exact name first,
+then a case-insensitive match when only one tag has it. A name with no tag is
+an error that lists the closest tags; --create-tag creates it instead. Tags
+are written by ID and read back afterwards, so a tag that did not stick is an
+error. Nothing goes through YouTrack's command language, so multi-word values
+need only shell quoting; braces are refused.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -75,6 +77,9 @@ yt issue update <id> [flags]
   # add tags, including a multi-word one
   yt issue update PROJ-123 --tag tech-debt --tag "To be discussed"
 
+  # create a tag that does not exist yet and apply it
+  yt issue update PROJ-123 --tag "needs triage" --create-tag
+
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
 
@@ -94,6 +99,7 @@ yt issue update <id> [flags]
       --add-field stringArray      add a value to a multi-value field, as "Name=Value" (repeatable)
   -a, --assignee string            set assignee (supports 'me')
       --board string               add the issue to this agile board
+      --create-tag                 create --tag names that do not exist yet
   -d, --description string         set issue description
       --field stringArray          set custom field as "Name=Value" (repeatable)
   -h, --help                       help for update

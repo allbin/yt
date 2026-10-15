@@ -8,7 +8,7 @@ import (
 )
 
 const issueFields = "idReadable,summary,description,resolved,created,updated," +
-	"tags(name)," +
+	"tags(id,name)," +
 	"customFields(name,value(name,text,presentation,login,fullName))," +
 	"attachments(id,name,url,size,mimeType,created)"
 

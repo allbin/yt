@@ -28,6 +28,7 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		createAssignee = ""
 		createLinks = nil
 		createTags = nil
+		createCreateTag = false
 		createFields = nil
 		createBoard = ""
 		createSprint = ""
@@ -40,6 +41,7 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		updateSubsystem = ""
 		updateTags = nil
 		updateRemoveTags = nil
+		updateCreateTag = false
 		updateFields = nil
 		updateAddFields = nil
 		updateRemoveFields = nil

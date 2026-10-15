@@ -20,6 +20,7 @@ var (
 	createAssignee    string
 	createLinks       []string
 	createTags        []string
+	createCreateTag   bool
 	createFields      []string
 	createBoard       string
 	createSprint      string
@@ -41,10 +42,13 @@ with the same name to set several values on a multi-value field. Values are
 checked against the project's allowed values ("yt project fields PROJ") and
 sent with the create request, so a bad value creates nothing.
 
-Use --tag to tag the issue: the name is matched whole, ignoring case, against
-the instance's tags, and a tag that does not exist yet is created. Tags go in
-the create request with the fields. Use --link "relation=ID" to link it to
-other issues ("yt link types" lists the relations).
+Use --tag to tag the issue. Tags match as on update: the exact name first,
+then a case-insensitive match when only one tag has it; a name with no tag is
+an error listing the closest tags, unless --create-tag creates it. Tags go in
+the create request with the fields and are read back afterwards.
+
+Use --link "relation=ID" to link it to other issues ("yt link types" lists
+the relations).
 
 Links and board placement are applied after the issue exists. If one of them
 fails, the created issue is still printed and the error names its ID: finish
@@ -111,6 +115,7 @@ func init() {
 	createCmd.Flags().StringVar(&createPriority, "priority", "", "set priority")
 	createCmd.Flags().StringVar(&createAssignee, "assignee", "", "set assignee (supports 'me')")
 	createCmd.Flags().StringArrayVarP(&createTags, "tag", "t", nil, "add tag (repeatable)")
+	createCmd.Flags().BoolVar(&createCreateTag, "create-tag", false, "create --tag names that do not exist yet")
 	createCmd.Flags().StringArrayVar(&createFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	createCmd.Flags().StringArrayVar(&createLinks, "link", nil, `link to an issue as "relation=ID", e.g. depends-on=AX-3 (repeatable)`)
 	createCmd.Flags().StringVar(&createBoard, "board", "", "add the issue to this agile board")
@@ -148,7 +153,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	tags, err := resolveTags(client, createTags, true)
+	tags, err := resolveAddTags(client, createTags, createCreateTag)
 	if err != nil {
 		return err
 	}
@@ -168,6 +173,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	// its ID, so the caller finishes it with update instead of creating a
 	// duplicate.
 	issue, stepErr := completeCreate(client, issue, links)
+	stepErr = errors.Join(verifyTags(issue, tags, nil), stepErr)
 
 	w := cmd.OutOrStdout()
 	if jsonOutput {

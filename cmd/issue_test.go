@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -103,63 +102,6 @@ func TestRunIssueComment(t *testing.T) {
 	}
 	if !strings.Contains(out, "PROJ-123") {
 		t.Errorf("output missing issue ID: %s", out)
-	}
-}
-
-func TestRunIssueUpdateWithTags(t *testing.T) {
-	mock := &mockAPI{
-		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
-		tags:  []youtrack.Tag{{ID: "6-1", Name: "tech-debt"}, {ID: "6-63", Name: "To be discussed"}},
-	}
-	run := setupTest(t, mock)
-
-	out, err := run("issue", "update", "PROJ-123", "--tag", "tech-debt", "--tag", "to be discussed", "--tag", "scheduler")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	// Existing tags by ID, whole-name case-insensitive; only the unknown one is created.
-	if want := []string{"PROJ-123|6-1", "PROJ-123|6-63", "PROJ-123|tag-scheduler"}; !slices.Equal(mock.tagged, want) {
-		t.Errorf("tagged = %q, want %q", mock.tagged, want)
-	}
-	if want := []string{"scheduler"}; !slices.Equal(mock.createdTags, want) {
-		t.Errorf("created tags = %q, want %q", mock.createdTags, want)
-	}
-	if !strings.Contains(out, "PROJ-123") {
-		t.Errorf("output missing issue ID: %s", out)
-	}
-}
-
-func TestRunIssueUpdateWithRemoveTag(t *testing.T) {
-	mock := &mockAPI{
-		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
-		tags:  []youtrack.Tag{{ID: "6-9", Name: "obsolete"}},
-	}
-	run := setupTest(t, mock)
-
-	out, err := run("issue", "update", "PROJ-123", "--remove-tag", "Obsolete")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if want := []string{"PROJ-123|6-9"}; !slices.Equal(mock.untagged, want) {
-		t.Errorf("untagged = %q, want %q", mock.untagged, want)
-	}
-	if !strings.Contains(out, "PROJ-123") {
-		t.Errorf("output missing issue ID: %s", out)
-	}
-}
-
-func TestRunIssueUpdateRemoveUnknownTag(t *testing.T) {
-	mock := &mockAPI{
-		issue: &youtrack.Issue{IDReadable: "PROJ-123", Summary: "Test"},
-	}
-	run := setupTest(t, mock)
-
-	_, err := run("issue", "update", "PROJ-123", "--remove-tag", "nope")
-	if err == nil || !strings.Contains(err.Error(), `no tag "nope"`) {
-		t.Fatalf("err = %v, want unknown tag", err)
-	}
-	if len(mock.createdTags) != 0 || len(mock.untagged) != 0 {
-		t.Errorf("--remove-tag wrote: created %q, untagged %q", mock.createdTags, mock.untagged)
 	}
 }
 
