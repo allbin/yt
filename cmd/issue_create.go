@@ -241,18 +241,17 @@ func resolveLinkArgs(client youtrack.API, raw []string) ([]linkArg, error) {
 }
 
 // completeCreate creates and applies the --create-tag tags, and applies
-// links and board placement, on a newly created issue. New tags wait for the issue, so
-// a rejected create leaves none behind. It always returns the best-known
-// state of the issue and the tags it created, alongside the first step that
-// failed.
+// links and board placement, on a newly created issue. New tags wait for
+// the issue, so a rejected create leaves none behind. It always returns the
+// best-known state of the issue and the tags it created, alongside every
+// step that failed.
 func completeCreate(client youtrack.API, created *youtrack.Issue, links []linkArg, newTags []string) (*youtrack.Issue, []youtrack.Tag, error) {
 	id := created.IDReadable
-	// A failed tag step does not hold back links and board placement: each
-	// failure is reported, and the rest of the issue is finished.
+	// A failed tag step does not hold back links and board placement, and
+	// tags created before a failure are still applied: each failure is
+	// reported, and the rest of the issue is finished.
 	tags, err := createMissingTags(client, newTags)
-	if err == nil {
-		err = applyTags(client, id, tags, nil)
-	}
+	err = errors.Join(err, applyTags(client, id, tags, nil))
 	placed, stepErr := applyCreateSteps(client, id, links)
 	err = errors.Join(err, stepErr)
 	if !placed && createParent == "" && len(links) == 0 && len(newTags) == 0 && err == nil {
