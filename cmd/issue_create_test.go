@@ -55,7 +55,8 @@ func TestRunIssueCreateUnknownTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := string(fake.createBody["tags"]); got != `[{"id":"6-a"},{"id":"6-new-needs review"}]` {
+	// The new tag is created and applied once the issue exists.
+	if got := string(fake.createBody["tags"]); got != `[{"id":"6-a"}]` {
 		t.Errorf("create body tags = %s", got)
 	}
 	if issue.TagNames() != "Investigation, needs review" {
@@ -76,6 +77,18 @@ func TestRunIssueCreateTagNotApplied(t *testing.T) {
 		if !strings.Contains(msg, want) {
 			t.Errorf("error %q missing %q", msg, want)
 		}
+	}
+}
+
+func TestRunIssueCreateRejectedCreatesNoTag(t *testing.T) {
+	fake, api := newFakeServer(t)
+	fake.rejectField = "Type"
+
+	if _, err := runCreateJSON(t, api, "--type", "Bug", "-t", "needs review", "--create-tag"); err == nil {
+		t.Fatal("expected the server's rejection")
+	}
+	if len(fake.created) != 0 {
+		t.Errorf("created tags %q for a rejected issue", fake.created)
 	}
 }
 

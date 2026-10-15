@@ -147,8 +147,8 @@ with the closest existing tags; add `--create-tag` only when a new tag is
 really meant. Tags are read back after writing, so a zero exit means they are
 on the issue. `--remove-tag` of a tag the issue does not carry is a no-op.
 
-Custom fields and tags go with the create request itself, so a bad value
-creates nothing. If `create` prints an issue but exits non-zero, the issue
+Custom fields and existing tags go with the create request itself, so a bad
+value creates nothing, not even a `--create-tag` tag. If `create` prints an issue but exits non-zero, the issue
 exists and only a follow-up step (links, board) failed. Finish it with
 `yt issue update <ID>` or `yt link`; running `create` again makes a duplicate.
 

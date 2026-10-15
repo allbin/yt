@@ -8,13 +8,21 @@ import (
 	"github.com/allbin/yt/internal/youtrack"
 )
 
-// resolveTags maps tag names to the instance's tags by whole name: the exact
+// tagLookup is a set of tag names resolved without writing anything: the
+// tags that exist, and the names still to create.
+type tagLookup struct {
+	found   []youtrack.Tag
+	missing []string
+}
+
+// lookupTags maps tag names to the instance's tags by whole name: the exact
 // name first, then a case-insensitive match when exactly one tag has it. A
-// name with no tag is created when create is set and an error naming the
-// closest tags, followed by missHint, otherwise. The result keeps the input
-// order.
-func resolveTags(client youtrack.API, names []string, create bool, missHint string) ([]youtrack.Tag, error) {
-	tags := make([]youtrack.Tag, 0, len(names))
+// name with no tag goes to missing when allowMissing is set, and is otherwise
+// an error naming the closest tags, followed by missHint. Blank names are
+// skipped. Nothing is written, so a caller creates missing tags only once
+// every other check has passed.
+func lookupTags(client youtrack.API, names []string, allowMissing bool, missHint string) (tagLookup, error) {
+	var l tagLookup
 	for _, name := range names {
 		name = strings.TrimSpace(name)
 		if name == "" {
@@ -22,34 +30,52 @@ func resolveTags(client youtrack.API, names []string, create bool, missHint stri
 		}
 		tag, err := findTag(client, name)
 		if err != nil {
-			return nil, err
+			return tagLookup{}, err
 		}
-		if tag != nil {
-			tags = append(tags, *tag)
-			continue
+		switch {
+		case tag != nil:
+			l.found = append(l.found, *tag)
+		case !allowMissing:
+			return tagLookup{}, unknownTagError(client, name, missHint)
+		case !slices.ContainsFunc(l.missing, func(m string) bool { return strings.EqualFold(m, name) }):
+			l.missing = append(l.missing, name)
 		}
-		if !create {
-			return nil, unknownTagError(client, name, missHint)
+	}
+	return l, nil
+}
+
+// lookupAddTags looks up the names given to --tag; missing ones are allowed
+// only with --create-tag. Braces are YouTrack query syntax, never part of a
+// tag name: "{To be discussed}" is refused rather than matched to, or created
+// as, a tag of that literal name.
+func lookupAddTags(client youtrack.API, names []string, create bool) (tagLookup, error) {
+	for _, name := range names {
+		name = strings.TrimSpace(name)
+		if strings.HasPrefix(name, "{") || strings.HasSuffix(name, "}") {
+			return tagLookup{}, fmt.Errorf("tag names take no braces: use --tag %q", strings.Trim(name, "{}"))
 		}
-		if tag, err = client.CreateTag(name); err != nil {
-			return nil, err
+	}
+	return lookupTags(client, names, create, "; --create-tag creates it")
+}
+
+// lookupRemoveTags looks up the names given to --remove-tag, which must all
+// exist.
+func lookupRemoveTags(client youtrack.API, names []string) ([]youtrack.Tag, error) {
+	l, err := lookupTags(client, names, false, "")
+	return l.found, err
+}
+
+// createMissingTags creates the named tags.
+func createMissingTags(client youtrack.API, names []string) ([]youtrack.Tag, error) {
+	tags := make([]youtrack.Tag, 0, len(names))
+	for _, name := range names {
+		tag, err := client.CreateTag(name)
+		if err != nil {
+			return tags, err
 		}
 		tags = append(tags, *tag)
 	}
 	return tags, nil
-}
-
-// resolveAddTags resolves the names given to --tag. Braces are YouTrack query
-// syntax, never part of a tag name: "{To be discussed}" is refused rather
-// than matched to, or created as, a tag of that literal name.
-func resolveAddTags(client youtrack.API, names []string, create bool) ([]youtrack.Tag, error) {
-	for _, name := range names {
-		name = strings.TrimSpace(name)
-		if strings.HasPrefix(name, "{") && strings.HasSuffix(name, "}") {
-			return nil, fmt.Errorf("tag names take no braces: use --tag %q", strings.Trim(name, "{}"))
-		}
-	}
-	return resolveTags(client, names, create, "; --create-tag creates it")
 }
 
 // findTag returns the tag whose whole name is name, or nil. The server's tag

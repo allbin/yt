@@ -180,15 +180,16 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	addTags, err := resolveAddTags(client, updateTags, updateCreateTag)
+	add, err := lookupAddTags(client, updateTags, updateCreateTag)
 	if err != nil {
 		return err
 	}
-	removeTags, err := resolveTags(client, updateRemoveTags, false, "")
+	removeTags, err := lookupRemoveTags(client, updateRemoveTags)
 	if err != nil {
 		return err
 	}
-	for _, t := range addTags {
+	// A name to create cannot also be removed: removal needs an existing tag.
+	for _, t := range add.found {
 		if slices.ContainsFunc(removeTags, func(r youtrack.Tag) bool { return r.ID == t.ID }) {
 			return fmt.Errorf("tag %q is in both --tag and --remove-tag", t.Name)
 		}
@@ -202,6 +203,13 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// New tags are created only now, after every check and the field write
+	// passed, so a failed update leaves no stray tag behind.
+	created, err := createMissingTags(client, add.missing)
+	if err != nil {
+		return err
+	}
+	addTags := append(add.found, created...)
 	if err := applyTags(client, id, addTags, removeTags); err != nil {
 		return err
 	}

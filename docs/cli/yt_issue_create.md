@@ -17,8 +17,9 @@ sent with the create request, so a bad value creates nothing.
 
 Use --tag to tag the issue. Tags match as on update: the exact name first,
 then a case-insensitive match when only one tag has it; a name with no tag is
-an error listing the closest tags, unless --create-tag creates it. Tags go in
-the create request with the fields and are read back afterwards.
+an error listing the closest tags, unless --create-tag creates it. Existing
+tags go in the create request with the fields; a tag made by --create-tag is
+created and applied once the issue exists. All are read back afterwards.
 
 Use --link "relation=ID" to link it to other issues ("yt link types" lists
 the relations).

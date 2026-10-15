@@ -44,8 +44,9 @@ sent with the create request, so a bad value creates nothing.
 
 Use --tag to tag the issue. Tags match as on update: the exact name first,
 then a case-insensitive match when only one tag has it; a name with no tag is
-an error listing the closest tags, unless --create-tag creates it. Tags go in
-the create request with the fields and are read back afterwards.
+an error listing the closest tags, unless --create-tag creates it. Existing
+tags go in the create request with the fields; a tag made by --create-tag is
+created and applied once the issue exists. All are read back afterwards.
 
 Use --link "relation=ID" to link it to other issues ("yt link types" lists
 the relations).
@@ -153,7 +154,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	tags, err := resolveAddTags(client, createTags, createCreateTag)
+	tags, err := lookupAddTags(client, createTags, createCreateTag)
 	if err != nil {
 		return err
 	}
@@ -163,7 +164,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 		Summary:     createSummary,
 		Description: description,
 		Fields:      updates,
-		TagIDs:      tagIDs(tags),
+		TagIDs:      tagIDs(tags.found),
 	})
 	if err != nil {
 		return err
@@ -172,8 +173,8 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	// From here on the issue exists. A failed step still prints it and names
 	// its ID, so the caller finishes it with update instead of creating a
 	// duplicate.
-	issue, stepErr := completeCreate(client, issue, links)
-	stepErr = errors.Join(verifyTags(issue, tags, nil), stepErr)
+	issue, created, stepErr := completeCreate(client, issue, links, tags.missing)
+	stepErr = errors.Join(verifyTags(issue, append(tags.found, created...), nil), stepErr)
 
 	w := cmd.OutOrStdout()
 	if jsonOutput {
@@ -238,19 +239,28 @@ func resolveLinkArgs(client youtrack.API, raw []string) ([]linkArg, error) {
 	return links, nil
 }
 
-// completeCreate applies links and board placement to a newly created
-// issue. It always returns the best-known state of the issue, alongside the
-// first step that failed.
-func completeCreate(client youtrack.API, created *youtrack.Issue, links []linkArg) (*youtrack.Issue, error) {
+// completeCreate creates and applies the --create-tag tags, then links and
+// board placement, on a newly created issue. New tags wait for the issue, so
+// a rejected create leaves none behind. It always returns the best-known
+// state of the issue and the tags it created, alongside the first step that
+// failed.
+func completeCreate(client youtrack.API, created *youtrack.Issue, links []linkArg, newTags []string) (*youtrack.Issue, []youtrack.Tag, error) {
 	id := created.IDReadable
-	placed, err := applyCreateSteps(client, id, links)
-	if !placed && createParent == "" && len(links) == 0 && err == nil {
-		return created, nil
+	tags, err := createMissingTags(client, newTags)
+	if err == nil {
+		err = applyTags(client, id, tags, nil)
+	}
+	placed := false
+	if err == nil {
+		placed, err = applyCreateSteps(client, id, links)
+	}
+	if !placed && createParent == "" && len(links) == 0 && len(newTags) == 0 && err == nil {
+		return created, tags, nil
 	}
 
 	issue, fetchErr := client.GetIssue(id)
 	if fetchErr != nil {
-		return created, errors.Join(err, fetchErr)
+		return created, tags, errors.Join(err, fetchErr)
 	}
 	if placed {
 		// Best-effort: show resulting board membership; ignore lookup failures.
@@ -258,7 +268,7 @@ func completeCreate(client youtrack.API, created *youtrack.Issue, links []linkAr
 			issue.Boards = boards
 		}
 	}
-	return issue, err
+	return issue, tags, err
 }
 
 // applyCreateSteps runs the post-create steps in order, stopping at the first

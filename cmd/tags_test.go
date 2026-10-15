@@ -92,9 +92,11 @@ func TestUpdateBracedTag(t *testing.T) {
 	fake, api := newFakeServer(t, "To be discussed", "{To be discussed}")
 	fake.issueTags = []youtrack.Tag{fake.tag("{To be discussed}")}
 
-	err := runUpdate(t, api, "--tag", "{To be discussed}", "--create-tag")
-	if err == nil || !strings.Contains(err.Error(), `use --tag "To be discussed"`) {
-		t.Fatalf("err = %v, want braces refused", err)
+	for _, name := range []string{"{To be discussed}", "{To be discussed"} {
+		err := runUpdate(t, api, "--tag", name, "--create-tag")
+		if err == nil || !strings.Contains(err.Error(), `use --tag "To be discussed"`) {
+			t.Fatalf("%s: err = %v, want braces refused", name, err)
+		}
 	}
 	if fake.tagWrites != 0 {
 		t.Errorf("%d tag writes, want none", fake.tagWrites)
@@ -119,14 +121,41 @@ func TestUpdateTagNotApplied(t *testing.T) {
 	}
 }
 
-func TestUpdateTagAddedAndRemoved(t *testing.T) {
-	fake, api := newFakeServer(t, "QA")
-
-	err := runUpdate(t, api, "--tag", "QA", "--remove-tag", "qa")
-	if err == nil || !strings.Contains(err.Error(), "both --tag and --remove-tag") {
-		t.Errorf("err = %v, want conflict", err)
+func TestUpdateTagChecksBeforeCreate(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"added_and_removed", []string{"--tag", "QA", "--remove-tag", "QA"}, "both --tag and --remove-tag"},
+		{"new_and_removed", []string{"--tag", "new", "--remove-tag", "new"}, `no tag "new"`},
+		{"unknown_remove", []string{"--tag", "new", "--remove-tag", "nope"}, `no tag "nope"`},
+		{"ambiguous_add", []string{"--tag", "new", "--tag", "Qa"}, "differ only in case"},
 	}
-	if fake.tagWrites != 0 {
-		t.Errorf("%d tag writes, want none", fake.tagWrites)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fake, api := newFakeServer(t, "QA", "qa")
+			err := runUpdate(t, api, append(tt.args, "--create-tag")...)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("err = %v, want %q", err, tt.want)
+			}
+			if strings.Contains(tt.want, "no tag") && strings.Contains(err.Error(), "--create-tag") {
+				t.Errorf("--remove-tag error offers --create-tag: %v", err)
+			}
+			if len(fake.created) != 0 || fake.tagWrites != 0 {
+				t.Errorf("failed update wrote: created %q, %d tag writes", fake.created, fake.tagWrites)
+			}
+		})
+	}
+}
+
+func TestUpdateBlankTagSkipped(t *testing.T) {
+	fake, api := newFakeServer(t, "Investigation")
+
+	if err := runUpdate(t, api, "--tag", " ", "--tag", "Investigation"); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := fake.issueTagNames(), []string{"Investigation"}; !slices.Equal(got, want) {
+		t.Errorf("issue tags = %q, want %q", got, want)
 	}
 }
