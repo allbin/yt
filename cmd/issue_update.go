@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/allbin/yt/internal/format"
 	"github.com/allbin/yt/internal/youtrack"
@@ -18,6 +19,7 @@ var (
 	updateDescription  string
 	updateTags         []string
 	updateRemoveTags   []string
+	updateCreateTag    bool
 	updateFields       []string
 	updateAddFields    []string
 	updateRemoveFields []string
@@ -44,10 +46,12 @@ Values are checked against the field's allowed values before anything is
 written ("yt project fields PROJ" lists them), and summary, description and
 fields are saved in one request: either all of them change or none do.
 
---tag and --remove-tag name tags; the name is matched whole, ignoring case,
-against the instance's tags, and a tag that does not exist yet is created.
-Nothing goes through YouTrack's command language, so multi-word values need
-only shell quoting.
+--tag and --remove-tag name tags by their whole name: the exact name first,
+then a case-insensitive match when only one tag has it. A name with no tag is
+an error that lists the closest tags; --create-tag creates it instead. Tags
+are written by ID and read back afterwards, so a tag that did not stick is an
+error. Nothing goes through YouTrack's command language, so multi-word values
+need only shell quoting; braces are refused.
 
 The description accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
@@ -91,6 +95,9 @@ After a successful update the issue is fetched and displayed.`,
   # add tags, including a multi-word one
   yt issue update PROJ-123 --tag tech-debt --tag "To be discussed"
 
+  # create a tag that does not exist yet and apply it
+  yt issue update PROJ-123 --tag "needs triage" --create-tag
+
   # remove a tag
   yt issue update PROJ-123 --remove-tag obsolete
 
@@ -117,6 +124,7 @@ func init() {
 	updateCmd.Flags().StringVarP(&updateDescription, "description", "d", "", "set issue description")
 	updateCmd.Flags().StringArrayVar(&updateTags, "tag", nil, "add tag (repeatable)")
 	updateCmd.Flags().StringArrayVar(&updateRemoveTags, "remove-tag", nil, "remove tag (repeatable)")
+	updateCmd.Flags().BoolVar(&updateCreateTag, "create-tag", false, "create --tag names that do not exist yet")
 	updateCmd.Flags().StringArrayVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringArrayVar(&updateAddFields, "add-field", nil, `add a value to a multi-value field, as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringArrayVar(&updateRemoveFields, "remove-field", nil, `remove a value from a multi-value field, as "Name=Value" (repeatable)`)
@@ -172,13 +180,19 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	addTags, err := resolveTags(client, updateTags, true)
+	add, err := lookupAddTags(client, updateTags, updateCreateTag)
 	if err != nil {
 		return err
 	}
-	removeTags, err := resolveTags(client, updateRemoveTags, false)
+	removeTags, err := lookupRemoveTags(client, updateRemoveTags)
 	if err != nil {
 		return err
+	}
+	// A name to create cannot also be removed: removal needs an existing tag.
+	for _, t := range add.found {
+		if slices.ContainsFunc(removeTags, func(r youtrack.Tag) bool { return r.ID == t.ID }) {
+			return fmt.Errorf("tag %q is in both --tag and --remove-tag", t.Name)
+		}
 	}
 
 	// Summary, description and custom fields go in one request: the server
@@ -189,6 +203,13 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// New tags are created only now, after every check and the field write
+	// passed, so a failed update leaves no stray tag behind.
+	created, err := createMissingTags(client, add.missing)
+	if err != nil {
+		return err
+	}
+	addTags := append(add.found, created...)
 	if err := applyTags(client, id, addTags, removeTags); err != nil {
 		return err
 	}
@@ -201,6 +222,9 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 
 	issue, err := client.GetIssue(id)
 	if err != nil {
+		return err
+	}
+	if err := verifyTags(issue, addTags, removeTags); err != nil {
 		return err
 	}
 	if boardChanged {

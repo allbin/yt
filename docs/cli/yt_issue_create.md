@@ -15,12 +15,17 @@ with the same name to set several values on a multi-value field. Values are
 checked against the project's allowed values ("yt project fields PROJ") and
 sent with the create request, so a bad value creates nothing.
 
-Use --tag to tag the issue: the name is matched whole, ignoring case, against
-the instance's tags, and a tag that does not exist yet is created. Tags go in
-the create request with the fields. Use --link "relation=ID" to link it to
-other issues ("yt link types" lists the relations).
+Use --tag to tag the issue. Tags match as on update: the exact name first,
+then a case-insensitive match when only one tag has it; a name with no tag is
+an error listing the closest tags, unless --create-tag creates it. Existing
+tags go in the create request with the fields; a tag made by --create-tag is
+created and applied once the issue exists. All are read back afterwards.
 
-Links and board placement are applied after the issue exists. If one of them
+Use --link "relation=ID" to link it to other issues ("yt link types" lists
+the relations).
+
+Tags made by --create-tag, links and board placement are applied after the
+issue exists. If one of them
 fails, the created issue is still printed and the error names its ID: finish
 it with "yt issue update" or "yt link" rather than creating it again.
 
@@ -87,6 +92,7 @@ yt issue create [flags]
 ```
       --assignee string      set assignee (supports 'me')
       --board string         add the issue to this agile board
+      --create-tag           create --tag names that do not exist yet
   -d, --description string   issue description (@file or - for stdin)
       --field stringArray    set custom field as "Name=Value" (repeatable)
   -h, --help                 help for create

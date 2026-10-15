@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"io"
 	"strings"
 
@@ -43,11 +44,12 @@ type mockAPI struct {
 	createdTagIDs []string
 	createCalled  bool
 
-	tags        []youtrack.Tag // the instance's tags
-	createdTags []string
-	tagged      []string // "issueID|tagID"
-	untagged    []string // "issueID|tagID"
-	tagErr      error
+	tags         []youtrack.Tag // the instance's tags
+	createdTags  []string
+	tagged       []string // "issueID|tagID"
+	untagged     []string // "issueID|tagID"
+	tagErr       error
+	createTagErr error // CreateTag alone fails
 
 	createdDescription string
 	addedComment       string
@@ -100,8 +102,8 @@ func (m *mockAPI) ListTags(query string) ([]youtrack.Tag, error) {
 	return out, m.tagErr
 }
 func (m *mockAPI) CreateTag(name string) (*youtrack.Tag, error) {
-	if m.tagErr != nil {
-		return nil, m.tagErr
+	if err := errors.Join(m.tagErr, m.createTagErr); err != nil {
+		return nil, err
 	}
 	tag := youtrack.Tag{ID: "tag-" + name, Name: name}
 	m.tags = append(m.tags, tag)
