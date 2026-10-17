@@ -1,9 +1,11 @@
 package youtrack
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -47,25 +49,59 @@ type ProjectField struct {
 	BundleType string `json:"-"`
 }
 
-// projectFieldSchema selects a project custom field's schema. The same shape
-// is served by a project's field list and by an issue's projectCustomField.
+// projectFieldSchema selects a project custom field's schema, as served by an
+// issue's projectCustomField.
 const projectFieldSchema = "field(name,fieldType(id,isMultiValue)),bundle($type,id,name,values(name,ordinal))"
 
-// ListProjectFields returns all custom fields for a project with their
-// allowed values.
-func (c *Client) ListProjectFields(projectID string) ([]ProjectField, error) {
-	params := url.Values{"fields": {projectFieldSchema}}
+// globalFieldSchema selects every custom field with its per-project instances.
+const globalFieldSchema = "name,fieldType(id,isMultiValue),instances(ordinal,project(id,shortName),bundle($type,id,name,values(name,ordinal)))"
 
-	path := "/api/admin/projects/" + url.PathEscape(projectID) + "/customFields"
-	data, err := c.get(path, params)
+// ListProjectFields returns a project's custom fields (project matched by
+// short name or ID) in the project's order, with their allowed values. It
+// reads the global field list because the per-project list is silently
+// filtered to 200 [] for users who lack permission to read project settings.
+// Finding no fields is an error: the token cannot tell an empty project from
+// a hidden one.
+func (c *Client) ListProjectFields(projectID string) ([]ProjectField, error) {
+	params := url.Values{"fields": {globalFieldSchema}, "$top": {"1000"}}
+
+	data, err := c.get("/api/admin/customFieldSettings/customFields", params)
 	if err != nil {
 		return nil, fmt.Errorf("fetch fields for project %s: %w", projectID, err)
 	}
 
-	var raw []rawProjectField
-	if err := json.Unmarshal(data, &raw); err != nil {
+	var global []struct {
+		rawField
+		Instances []struct {
+			Ordinal int `json:"ordinal"`
+			Project *struct {
+				ID        string `json:"id"`
+				ShortName string `json:"shortName"`
+			} `json:"project"`
+			Bundle *rawBundle `json:"bundle"`
+		} `json:"instances"`
+	}
+	if err := json.Unmarshal(data, &global); err != nil {
 		return nil, fmt.Errorf("parse fields for project %s: %w", projectID, err)
 	}
+
+	var raw []rawProjectField
+	for _, f := range global {
+		for _, in := range f.Instances {
+			if p := in.Project; p != nil && (p.ID == projectID || strings.EqualFold(p.ShortName, projectID)) {
+				raw = append(raw, rawProjectField{Ordinal: in.Ordinal, Field: &f.rawField, Bundle: in.Bundle})
+			}
+		}
+	}
+
+	if len(raw) == 0 {
+		if _, err := c.get("/api/admin/projects/"+url.PathEscape(projectID), url.Values{"fields": {"id"}}); err != nil {
+			return nil, fmt.Errorf("fetch fields for project %s: %w", projectID, err)
+		}
+		return nil, fmt.Errorf("project %s has no custom fields visible to this token; it may have none, or the token may not be allowed to read them", projectID)
+	}
+
+	slices.SortStableFunc(raw, func(a, b rawProjectField) int { return cmp.Compare(a.Ordinal, b.Ordinal) })
 	return toProjectFields(raw), nil
 }
 
@@ -107,20 +143,29 @@ func (c *Client) GetProjectFieldValues(projectID, fieldName string) ([]BundleVal
 	return nil, nil
 }
 
+// rawField is a custom field's definition as the API serves it.
+type rawField struct {
+	Name      string `json:"name"`
+	FieldType *struct {
+		ID           string `json:"id"`
+		IsMultiValue bool   `json:"isMultiValue"`
+	} `json:"fieldType"`
+}
+
+// rawBundle is the value bundle a field uses in one project.
+type rawBundle struct {
+	Type   string        `json:"$type"`
+	ID     string        `json:"id"`
+	Name   string        `json:"name"`
+	Values []BundleValue `json:"values"`
+}
+
+// rawProjectField is a field as configured on one project. Ordinal is its
+// position in the project's field order; only ListProjectFields sets it.
 type rawProjectField struct {
-	Field *struct {
-		Name      string `json:"name"`
-		FieldType *struct {
-			ID           string `json:"id"`
-			IsMultiValue bool   `json:"isMultiValue"`
-		} `json:"fieldType"`
-	} `json:"field"`
-	Bundle *struct {
-		Type   string        `json:"$type"`
-		ID     string        `json:"id"`
-		Name   string        `json:"name"`
-		Values []BundleValue `json:"values"`
-	} `json:"bundle"`
+	Ordinal int        `json:"ordinal"`
+	Field   *rawField  `json:"field"`
+	Bundle  *rawBundle `json:"bundle"`
 }
 
 func toProjectFields(raw []rawProjectField) []ProjectField {

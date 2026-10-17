@@ -2,6 +2,7 @@ package youtrack
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -258,32 +259,78 @@ func TestUploadAttachments(t *testing.T) {
 	}
 }
 
-func TestListProjectFields(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/api/admin/projects/HK/customFields" {
-			t.Errorf("path = %s", r.URL.Path)
-		}
-		_, _ = io.WriteString(w, `[
- {"field":{"name":"Customer","fieldType":{"id":"enum[*]","isMultiValue":true}},
-  "bundle":{"$type":"EnumBundle","id":"94-19","name":"Mobilix: Customer","values":[{"name":"VL","ordinal":1},{"name":"LTS","ordinal":0}]}},
- {"field":{"name":"Estimation","fieldType":{"id":"period","isMultiValue":false}}}
-]`)
-	}))
-	defer srv.Close()
+// globalFieldsJSON is the shape /api/admin/customFieldSettings/customFields
+// returns: HK's (0-12) instances out of ordinal order, beside AX's and one
+// with no project.
+const globalFieldsJSON = `[
+ {"name":"Estimation","fieldType":{"id":"period","isMultiValue":false},
+  "instances":[{"ordinal":3,"project":{"id":"0-12","shortName":"HK"}},{"ordinal":0,"project":{"id":"0-7","shortName":"AX"}}]},
+ {"name":"Sprint","fieldType":{"id":"version[*]","isMultiValue":true},
+  "instances":[{"ordinal":1,"project":{"id":"0-7","shortName":"AX"}},{"ordinal":0,"project":null}]},
+ {"name":"Customer","fieldType":{"id":"enum[*]","isMultiValue":true},
+  "instances":[{"ordinal":1,"project":{"id":"0-12","shortName":"HK"},
+   "bundle":{"$type":"EnumBundle","id":"94-19","name":"Mobilix: Customer","values":[{"name":"VL","ordinal":1},{"name":"LTS","ordinal":0}]}}]}
+]`
 
-	fields, err := NewClient(srv.URL, "token").ListProjectFields("HK")
-	if err != nil {
-		t.Fatal(err)
+func TestListProjectFields(t *testing.T) {
+	tests := []struct {
+		name    string
+		project string
+		// projectStatus and projectBody answer GET /api/admin/projects/{project};
+		// a zero status means the case must not make that request.
+		projectStatus int
+		projectBody   string
+		wantErr       string
+	}{
+		{name: "short name ignores case", project: "hk"},
+		{name: "internal id", project: "0-12"},
+		{name: "unknown project", project: "NOPE", projectStatus: http.StatusNotFound,
+			projectBody: `{"error":"Not Found","error_description":"Entity with id NOPE not found"}`,
+			wantErr:     "Entity with id NOPE not found"},
+		{name: "no visible fields", project: "EMPTY", projectStatus: http.StatusOK,
+			projectBody: `{"id":"0-99"}`, wantErr: "no custom fields visible"},
 	}
-	if len(fields) != 2 {
-		t.Fatalf("got %d fields", len(fields))
-	}
-	c, e := fields[0], fields[1]
-	if c.Type != "enum[]" || !c.Multi || c.BundleID != "94-19" || c.BundleType != "EnumBundle" || c.Values[0].Name != "LTS" {
-		t.Errorf("Customer = %+v", c)
-	}
-	if e.Type != "period" || e.BundleID != "" {
-		t.Errorf("Estimation = %+v", e)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				switch {
+				case r.URL.Path == "/api/admin/customFieldSettings/customFields":
+					_, _ = io.WriteString(w, globalFieldsJSON)
+				case tt.projectStatus != 0 && r.URL.Path == "/api/admin/projects/"+tt.project:
+					w.WriteHeader(tt.projectStatus)
+					_, _ = io.WriteString(w, tt.projectBody)
+				default:
+					t.Errorf("unexpected request %s", r.URL.Path)
+					w.WriteHeader(http.StatusInternalServerError)
+				}
+			}))
+			defer srv.Close()
+
+			fields, err := NewClient(srv.URL, "token").ListProjectFields(tt.project)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("err = %v, want %q", err, tt.wantErr)
+				}
+				var apiErr *APIError
+				if tt.projectStatus == http.StatusNotFound && (!errors.As(err, &apiErr) || apiErr.StatusCode != http.StatusNotFound) {
+					t.Errorf("err = %v, want an APIError 404", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(fields) != 2 || fields[0].Name != "Customer" || fields[1].Name != "Estimation" {
+				t.Fatalf("fields = %+v, want Customer then Estimation", fields)
+			}
+			c, e := fields[0], fields[1]
+			if c.Type != "enum[]" || !c.Multi || c.BundleID != "94-19" || c.BundleType != "EnumBundle" || c.Values[0].Name != "LTS" {
+				t.Errorf("Customer = %+v", c)
+			}
+			if e.Type != "period" || e.Multi || e.BundleID != "" {
+				t.Errorf("Estimation = %+v", e)
+			}
+		})
 	}
 }
 

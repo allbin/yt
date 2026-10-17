@@ -103,11 +103,16 @@ func (f *fakeServer) serve(w http.ResponseWriter, r *http.Request) {
 		if !f.dropTags {
 			f.issueTags = slices.DeleteFunc(f.issueTags, func(t youtrack.Tag) bool { return t.ID == id })
 		}
-	case r.Method == http.MethodGet && r.URL.Path == "/api/admin/projects/AX/customFields":
+	case r.Method == http.MethodGet && r.URL.Path == "/api/admin/customFieldSettings/customFields":
 		f.write(w, []map[string]any{{
-			"field": map[string]any{"name": "Type", "fieldType": map[string]any{"id": "enum[1]", "isMultiValue": false}},
-			"bundle": map[string]any{"$type": "EnumBundle", "id": "b1", "name": "Types",
-				"values": []map[string]any{{"name": "Bug", "ordinal": 0}, {"name": "User Story", "ordinal": 1}}},
+			"name":      "Type",
+			"fieldType": map[string]any{"id": "enum[1]", "isMultiValue": false},
+			"instances": []map[string]any{{
+				"ordinal": 0,
+				"project": map[string]any{"id": "0-1", "shortName": "AX"},
+				"bundle": map[string]any{"$type": "EnumBundle", "id": "b1", "name": "Types",
+					"values": []map[string]any{{"name": "Bug", "ordinal": 0}, {"name": "User Story", "ordinal": 1}}},
+			}},
 		}})
 	case r.Method == http.MethodPost && r.URL.Path == "/api/issues":
 		f.createCalls++
