@@ -71,7 +71,7 @@ yt install skill
 
 ## Development
 
-Requires Go 1.26+ and [just](https://github.com/casey/just).
+Requires Go 1.27+ and [just](https://github.com/casey/just).
 
 ```bash
 just build    # build binary

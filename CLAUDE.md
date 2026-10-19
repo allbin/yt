@@ -1,6 +1,6 @@
 # yt
 
-YouTrack CLI. Module: `github.com/allbin/yt`. Go 1.26+.
+YouTrack CLI. Module: `github.com/allbin/yt`. Go 1.27+.
 
 ## Commands
 
