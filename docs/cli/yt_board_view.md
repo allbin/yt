@@ -9,13 +9,14 @@ Open a full-screen interactive viewer for an agile board.
 Shows board columns, swimlanes, and issue cards in a navigable grid.
 Supports changing issue state, opening issue details, and refreshing.
 
+The board is a name (case-insensitive), id or URL, as for "yt board".
 Defaults to the current sprint unless --sprint is specified.
 
 Without a terminal to draw on, or with --json, lists the sprint's issues
-instead of opening the viewer -- the same output as "yt board <name>".
+instead of opening the viewer -- the same output as "yt board <board>".
 
 ```
-yt board view [name] [flags]
+yt board view <board> [flags]
 ```
 
 ### Examples

@@ -54,13 +54,17 @@ YouTrack search syntax.
 
 ```bash
 yt board list --json
-yt board <name> --json        # current sprint; --sprint <name> for another
+yt board <board> --json       # current sprint; --sprint <name> for another
 yt sprint list <board> --json
 ```
 
-Board names match case-insensitively.
+`<board>` (and every `--board`) is a name, matched case-insensitively, a board
+id (`124-66`), or a board URL (`https://<host>/agiles/124-66/current`).
+`yt board list` shows only boards shared with the user: a board private to its
+owner is missing from it, so its name is not found, but its id or URL works.
+When given a board link, pass the link.
 
-A board's `kind` says what puts an issue on it, and `yt board <name> --json`
+A board's `kind` says what puts an issue on it, and `yt board <board> --json`
 states it with a `membership` sentence:
 
 - `sprints`: the issue is assigned to one of the board's sprints; a project or
@@ -81,7 +85,8 @@ Both are idempotent: `add` reports `already on board` and `remove` reports
 reports `on board by its query, nothing to add` for an issue the board shows
 and errors for one it does not, naming the query to match. `yt issue <ID>
 --json` lists every board the issue is on as `{board, kind, sprint}`, with
-`sprint` only on a `sprints` board.
+`sprint` only on a `sprints` board; it scans only the boards `yt board list`
+shows.
 
 ## Activity history
 

@@ -24,7 +24,7 @@ func (m *mockAPI) ListIssuesCompact(string, int) ([]youtrack.IssueCompact, error
 	return nil, nil
 }
 func (m *mockAPI) ListBoards() ([]youtrack.Agile, error)           { return nil, nil }
-func (m *mockAPI) GetBoardByName(string) (*youtrack.Agile, error)  { return m.board, m.boardErr }
+func (m *mockAPI) GetBoard(string) (*youtrack.Agile, error)        { return m.board, m.boardErr }
 func (m *mockAPI) GetBoardForView(string) (*youtrack.Agile, error) { return m.board, m.boardErr }
 func (m *mockAPI) ListProjects() ([]youtrack.Project, error)       { return nil, nil }
 func (m *mockAPI) CurrentUser() (*youtrack.User, error)            { return nil, nil }
@@ -54,6 +54,9 @@ func (m *mockAPI) AddIssueToSprint(string, string, string) error          { retu
 func (m *mockAPI) RemoveIssueFromSprint(string, string, string) error     { return nil }
 func (m *mockAPI) IssueBoards(string) ([]youtrack.BoardMembership, error) { return nil, nil }
 func (m *mockAPI) BoardIssues(*youtrack.Agile) ([]string, error)          { return nil, nil }
+func (m *mockAPI) ListBoardIssues(*youtrack.Agile, *youtrack.Sprint, string) ([]youtrack.Issue, error) {
+	return m.issues, nil
+}
 func (m *mockAPI) ListFieldActivities(youtrack.FieldActivityFilter) ([]youtrack.FieldActivity, error) {
 	return nil, nil
 }

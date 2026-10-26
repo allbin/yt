@@ -6,7 +6,7 @@ Remove issue(s) from a board's sprint
 
 Remove one or more issues from an agile board's sprint.
 
-The board is matched by name (case-insensitive). Without --sprint the board's
+The board is a name (case-insensitive), id or URL, as for "yt board". Without --sprint the board's
 current sprint is used.
 
 Removing is idempotent: an issue not on the sprint is reported as such. A

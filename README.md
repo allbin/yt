@@ -45,6 +45,8 @@ yt issue list -p PROJ -n 500 --json --compact   # one small object per issue
 yt board list
 yt board HållKoll -a me
 yt board HållKoll -s "In Review" --json
+yt board 124-66            # by id or URL, for a board missing from the list
+yt board https://example.youtrack.cloud/agiles/124-66/current
 
 # Git integration
 yt branch PROJ-123         # creates proj-123-slugified-summary
@@ -58,6 +60,9 @@ yt issue comments PROJ-123
 ```
 
 All commands support `--json` for structured output.
+A board argument is a name (case-insensitive), id or URL. `yt board list` shows
+only boards shared with you and leaves out one private to its owner; pass that
+one by id or URL.
 
 ## Setup
 

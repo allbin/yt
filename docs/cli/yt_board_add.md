@@ -6,7 +6,7 @@ Add issue(s) to a board's sprint
 
 Add one or more issues to an agile board by placing them on a sprint.
 
-The board is matched by name (case-insensitive). Without --sprint the board's
+The board is a name (case-insensitive), id or URL, as for "yt board". Without --sprint the board's
 current sprint is used; a sprintless board has none and takes no --sprint.
 
 Adding is idempotent: an issue already on the sprint is reported as such and

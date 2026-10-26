@@ -120,7 +120,7 @@ func init() {
 	createCmd.Flags().BoolVar(&createCreateTag, "create-tag", false, "create --tag names that do not exist yet")
 	createCmd.Flags().StringArrayVar(&createFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	createCmd.Flags().StringArrayVar(&createLinks, "link", nil, `link to an issue as "relation=ID", e.g. depends-on=AX-3 (repeatable)`)
-	createCmd.Flags().StringVar(&createBoard, "board", "", "add the issue to this agile board")
+	createCmd.Flags().StringVar(&createBoard, "board", "", "add the issue to this agile board (name, id or URL)")
 	createCmd.Flags().StringVar(&createSprint, "sprint", "", "sprint for --board (default: current)")
 	createCmd.Flags().StringVar(&createLike, "like", "", "mirror another issue's board and sprint")
 	createCmd.Flags().StringVar(&createParent, "parent", "", "make the issue a subtask of this issue and share its board")

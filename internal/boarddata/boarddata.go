@@ -61,8 +61,8 @@ func (f *Fetcher) fetchIssues(board *youtrack.Agile, sprintName string) (Result,
 		}
 	}
 
-	query := board.SearchQuery(resolveSprint(board, sprintName))
-	issues, err := f.client.ListIssues(query, 0)
+	sprint := &youtrack.Sprint{ID: resolveSprintID(board, sprintName), Name: resolveSprint(board, sprintName)}
+	issues, err := f.client.ListBoardIssues(board, sprint, "")
 	if err != nil {
 		return Result{}, err
 	}

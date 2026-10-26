@@ -4,7 +4,9 @@ List agile boards
 
 ### Synopsis
 
-List all agile boards with their projects and current sprint.
+List the agile boards shared with you, with their projects and current
+sprint. YouTrack leaves out a board private to its owner even when you can
+open it; give that board to "yt board" by id or URL.
 
 ```
 yt board list [flags]

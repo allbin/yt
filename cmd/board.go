@@ -17,10 +17,12 @@ var (
 )
 
 var boardCmd = &cobra.Command{
-	Use:   "board [name]",
+	Use:   "board [board]",
 	Short: "Show board issues or list boards",
-	Long: `Show the issues on an agile board. Looks up the board by name
-(case-insensitive).
+	Long: `Show the issues on an agile board. The board is a name (case-insensitive),
+an id (124-66) or a board URL (https://<host>/agiles/124-66/current). A board
+private to its owner is missing from the board list, so its name is not found;
+its id or URL still works.
 
 A board is one of four kinds, by what puts an issue on it: "sprints" (the
 issue is assigned to one of the board's sprints; shown for the current sprint
@@ -48,6 +50,10 @@ Use subcommands to list available boards.`,
   # combine filters with extra query
   yt board HållKoll -a me -q "sort by: Priority"
 
+  # by id or URL, for a board not in "yt board list"
+  yt board 124-66
+  yt board https://example.youtrack.cloud/agiles/124-66/current
+
   # JSON output: kind, membership, sprint and issues
   yt board HållKoll --json`,
 	Args: cobra.MaximumNArgs(1),
@@ -70,7 +76,7 @@ type boardFilter struct {
 	query    string
 }
 
-// boardView is the JSON form of "yt board <name>": the board's kind and what
+// boardView is the JSON form of "yt board <board>": the board's kind and what
 // membership means for it, ahead of the issues shown.
 type boardView struct {
 	Name        string           `json:"name"`
@@ -98,13 +104,13 @@ func runBoard(cmd *cobra.Command, args []string) error {
 // showBoard writes a board's issues, honouring --json. On a sprint-based
 // board these are one sprint's issues; a sprintless board has only the one
 // set.
-func showBoard(cmd *cobra.Command, name string, f boardFilter) error {
+func showBoard(cmd *cobra.Command, ref string, f boardFilter) error {
 	client, err := apiFactory()
 	if err != nil {
 		return err
 	}
 
-	board, err := client.GetBoardByName(name)
+	board, err := client.GetBoard(ref)
 	if err != nil {
 		return err
 	}
@@ -119,17 +125,8 @@ func showBoard(cmd *cobra.Command, name string, f boardFilter) error {
 		return err
 	}
 
-	sprintName := ""
-	if sprint != nil {
-		sprintName = sprint.Name
-	}
-	boardPart := board.SearchQuery(sprintName)
-	if f.query != "" {
-		boardPart += " " + f.query
-	}
-	query := youtrack.BuildQuery("", f.state, assignee, boardPart)
-
-	issues, err := client.ListIssues(query, 0)
+	filter := youtrack.BuildQuery("", f.state, assignee, f.query)
+	issues, err := client.ListBoardIssues(board, sprint, filter)
 	if err != nil {
 		return err
 	}

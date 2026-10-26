@@ -6,7 +6,7 @@ List a board's sprints
 
 List the sprints of an agile board, marking the current sprint.
 
-The board is matched by name (case-insensitive), like "yt board".
+The board is a name (case-insensitive), id or URL, as for "yt board".
 
 ```
 yt sprint list <board> [flags]

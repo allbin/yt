@@ -4,8 +4,10 @@ Show board issues or list boards
 
 ### Synopsis
 
-Show the issues on an agile board. Looks up the board by name
-(case-insensitive).
+Show the issues on an agile board. The board is a name (case-insensitive),
+an id (124-66) or a board URL (https://<host>/agiles/124-66/current). A board
+private to its owner is missing from the board list, so its name is not found;
+its id or URL still works.
 
 A board is one of four kinds, by what puts an issue on it: "sprints" (the
 issue is assigned to one of the board's sprints; shown for the current sprint
@@ -20,7 +22,7 @@ login names, and full names.
 Use subcommands to list available boards.
 
 ```
-yt board [name] [flags]
+yt board [board] [flags]
 ```
 
 ### Examples
@@ -40,6 +42,10 @@ yt board [name] [flags]
 
   # combine filters with extra query
   yt board HållKoll -a me -q "sort by: Priority"
+
+  # by id or URL, for a board not in "yt board list"
+  yt board 124-66
+  yt board https://example.youtrack.cloud/agiles/124-66/current
 
   # JSON output: kind, membership, sprint and issues
   yt board HållKoll --json

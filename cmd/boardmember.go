@@ -19,11 +19,11 @@ type sprintChange struct {
 	Note    string `json:"note,omitempty"`
 }
 
-// loadBoardSprint resolves a board by name and the sprint to act on: the
+// loadBoardSprint resolves a board by name, id or URL and the sprint to act on: the
 // named sprint, or the board's current one. A sprintless board has one
 // implicit sprint, which the API still needs, and takes no --sprint.
-func loadBoardSprint(client youtrack.API, boardName, sprintName string) (*youtrack.Agile, *youtrack.Sprint, error) {
-	board, err := client.GetBoardByName(boardName)
+func loadBoardSprint(client youtrack.API, boardRef, sprintName string) (*youtrack.Agile, *youtrack.Sprint, error) {
+	board, err := client.GetBoard(boardRef)
 	if err != nil {
 		return nil, nil, err
 	}

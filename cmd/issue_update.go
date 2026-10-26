@@ -128,7 +128,7 @@ func init() {
 	updateCmd.Flags().StringArrayVar(&updateFields, "field", nil, `set custom field as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringArrayVar(&updateAddFields, "add-field", nil, `add a value to a multi-value field, as "Name=Value" (repeatable)`)
 	updateCmd.Flags().StringArrayVar(&updateRemoveFields, "remove-field", nil, `remove a value from a multi-value field, as "Name=Value" (repeatable)`)
-	updateCmd.Flags().StringVar(&updateBoard, "board", "", "add the issue to this agile board")
+	updateCmd.Flags().StringVar(&updateBoard, "board", "", "add the issue to this agile board (name, id or URL)")
 	updateCmd.Flags().StringVar(&updateSprint, "sprint", "", "sprint for --board (default: current)")
 
 	_ = updateCmd.RegisterFlagCompletionFunc("state", completeFieldValues("State"))

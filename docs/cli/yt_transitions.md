@@ -47,7 +47,7 @@ yt transitions [flags]
 ### Options
 
 ```
-      --board string     read changes against this board's columns
+      --board string     read changes against this board's columns (name, id or URL)
       --field string     field whose changes to list (default "State")
   -h, --help             help for transitions
   -p, --project string   only issues in this project

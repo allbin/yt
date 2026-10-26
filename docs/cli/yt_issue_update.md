@@ -98,7 +98,7 @@ yt issue update <id> [flags]
 ```
       --add-field stringArray      add a value to a multi-value field, as "Name=Value" (repeatable)
   -a, --assignee string            set assignee (supports 'me')
-      --board string               add the issue to this agile board
+      --board string               add the issue to this agile board (name, id or URL)
       --create-tag                 create --tag names that do not exist yet
   -d, --description string         set issue description
       --field stringArray          set custom field as "Name=Value" (repeatable)

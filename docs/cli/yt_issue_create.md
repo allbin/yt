@@ -91,7 +91,7 @@ yt issue create [flags]
 
 ```
       --assignee string      set assignee (supports 'me')
-      --board string         add the issue to this agile board
+      --board string         add the issue to this agile board (name, id or URL)
       --create-tag           create --tag names that do not exist yet
   -d, --description string   issue description (@file or - for stdin)
       --field stringArray    set custom field as "Name=Value" (repeatable)

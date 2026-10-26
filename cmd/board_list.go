@@ -8,7 +8,9 @@ import (
 var boardListCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List agile boards",
-	Long:  "List all agile boards with their projects and current sprint.",
+	Long: `List the agile boards shared with you, with their projects and current
+sprint. YouTrack leaves out a board private to its owner even when you can
+open it; give that board to "yt board" by id or URL.`,
 	Example: `  yt board list
   yt board list --json`,
 	RunE: runBoardList,

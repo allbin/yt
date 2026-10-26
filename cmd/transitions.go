@@ -67,7 +67,7 @@ func init() {
 	transitionsCmd.Flags().StringVar(&transitionsSince, "since", "7d", "start of range (date, RFC 3339, or duration ago)")
 	transitionsCmd.Flags().StringVar(&transitionsUntil, "until", "", "end of range (default: now)")
 	transitionsCmd.Flags().StringVar(&transitionsField, "field", "State", "field whose changes to list")
-	transitionsCmd.Flags().StringVar(&transitionsBoard, "board", "", "read changes against this board's columns")
+	transitionsCmd.Flags().StringVar(&transitionsBoard, "board", "", "read changes against this board's columns (name, id or URL)")
 	transitionsCmd.Flags().StringVarP(&transitionsProject, "project", "p", "", "only issues in this project")
 	transitionsCmd.Flags().StringVarP(&transitionsQuery, "query", "q", "", "only issues matching this YouTrack query")
 }

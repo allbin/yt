@@ -10,7 +10,7 @@ var sprintListCmd = &cobra.Command{
 	Short: "List a board's sprints",
 	Long: `List the sprints of an agile board, marking the current sprint.
 
-The board is matched by name (case-insensitive), like "yt board".`,
+The board is a name (case-insensitive), id or URL, as for "yt board".`,
 	Example: `  yt sprint list AllTix
   yt sprint list AllTix --json`,
 	Args: cobra.ExactArgs(1),
@@ -27,7 +27,7 @@ func runSprintList(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	board, err := client.GetBoardByName(args[0])
+	board, err := client.GetBoard(args[0])
 	if err != nil {
 		return err
 	}

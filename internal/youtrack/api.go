@@ -8,8 +8,8 @@ type API interface {
 	ListIssues(query string, limit int) ([]Issue, error)
 	ListIssuesCompact(query string, limit int) ([]IssueCompact, error)
 	ListBoards() ([]Agile, error)
-	GetBoardByName(name string) (*Agile, error)
-	GetBoardForView(name string) (*Agile, error)
+	GetBoard(ref string) (*Agile, error)
+	GetBoardForView(ref string) (*Agile, error)
 	ListProjects() ([]Project, error)
 	CurrentUser() (*User, error)
 	ResolveUser(query string) (string, error)
@@ -35,6 +35,7 @@ type API interface {
 	RemoveIssueFromSprint(agileID, sprintID, issueID string) error
 	IssueBoards(issueID string) ([]BoardMembership, error)
 	BoardIssues(board *Agile) ([]string, error)
+	ListBoardIssues(board *Agile, sprint *Sprint, filter string) ([]Issue, error)
 	ListFieldActivities(f FieldActivityFilter) ([]FieldActivity, error)
 	ListAttachments(issueID string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error
