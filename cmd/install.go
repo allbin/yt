@@ -8,8 +8,8 @@ var installCmd = &cobra.Command{
 	Long: `Install supporting integrations for the yt CLI.
 
 Subcommands install shell completions for tab-completion and the yt skill for
-every supported coding agent found on this machine (Claude Code, Codex), so the
-agent can interact with YouTrack via this CLI.`,
+every supported coding agent found on this machine (Claude Code, Codex,
+opencode, pi), so the agent can interact with YouTrack via this CLI.`,
 }
 
 func init() {

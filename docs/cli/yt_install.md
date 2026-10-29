@@ -7,8 +7,8 @@ Install shell completions and agent skills
 Install supporting integrations for the yt CLI.
 
 Subcommands install shell completions for tab-completion and the yt skill for
-every supported coding agent found on this machine (Claude Code, Codex), so the
-agent can interact with YouTrack via this CLI.
+every supported coding agent found on this machine (Claude Code, Codex,
+opencode, pi), so the agent can interact with YouTrack via this CLI.
 
 ### Options
 
@@ -26,5 +26,5 @@ agent can interact with YouTrack via this CLI.
 
 * [yt](yt.md)	 - YouTrack CLI
 * [yt install completion](yt_install_completion.md)	 - Install shell completions
-* [yt install skill](yt_install_skill.md)	 - Install the yt skill for Claude Code and Codex
+* [yt install skill](yt_install_skill.md)	 - Install the yt skill for Claude Code, Codex, opencode, and pi
 

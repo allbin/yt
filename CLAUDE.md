@@ -25,7 +25,7 @@ just install  # go install
 - `internal/youtrack/` -- API interface + HTTP client + types
 - `internal/format/` -- text/JSON formatters
 - `internal/git/` -- git helpers (branch naming)
-- `internal/skill/` -- installs cmd/skill.md for agents (Claude Code, Codex)
+- `internal/skill/` -- installs cmd/skill.md for agents (Claude Code, Codex, opencode, pi)
 - `internal/tools/` -- docgen
 
 ## Patterns

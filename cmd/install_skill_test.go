@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/allbin/yt/internal/skill"
 )
 
 // isolateInstall points $HOME at a temp dir and empties $PATH so agent
@@ -58,7 +60,7 @@ func TestRunInstallSkillNoAgentFound(t *testing.T) {
 	if !strings.Contains(err.Error(), "no supported agent found") {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if strings.Count(out, "skipped") != 2 {
+	if strings.Count(out, "skipped") != len(skill.Targets()) {
 		t.Errorf("expected every agent skipped: %s", out)
 	}
 }

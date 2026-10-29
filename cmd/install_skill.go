@@ -16,13 +16,15 @@ var skillContent string
 
 var installSkillCmd = &cobra.Command{
 	Use:   "skill",
-	Short: "Install the yt skill for Claude Code and Codex",
+	Short: "Install the yt skill for Claude Code, Codex, opencode, and pi",
 	Long: `Install the YouTrack CLI skill for every supported agent found on this machine.
 
 Supported agents:
 
   Claude Code   ~/.claude/skills/yt/SKILL.md
   Codex         ~/.codex/skills/yt/SKILL.md
+  opencode      ~/.config/opencode/skills/yt/SKILL.md
+  pi            ~/.pi/agent/skills/yt/SKILL.md
 
 An agent counts as present when its executable is on $PATH or its config
 directory holds more than the yt skill itself. Agents that are absent are
@@ -30,8 +32,8 @@ skipped, and every agent is reported as installed (nothing was there),
 updated (the file existed with older content), unchanged (already current),
 or skipped.
 
-The skill frontmatter is adapted per agent: Codex only reads name and
-description, so Claude-specific keys are stripped from its copy.
+The skill frontmatter is adapted per agent: Codex, opencode, and pi only get
+name and description, so Claude-specific keys are stripped from their copies.
 
 A legacy Claude Code command at ~/.claude/commands/yt.md is removed if present.`,
 	Example: `  yt install skill`,

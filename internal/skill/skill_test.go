@@ -131,15 +131,22 @@ func TestOurOwnSkillIsNotProofOfPresence(t *testing.T) {
 
 func TestInstallStripsFrontmatterPerTarget(t *testing.T) {
 	home := isolate(t)
-	markPresent(t, home, ".claude")
-	markPresent(t, home, ".codex")
-
-	Install(testSkill, home)
-
-	codex, err := os.ReadFile(filepath.Join(home, ".codex", "skills", "yt", "SKILL.md"))
-	if err != nil {
-		t.Fatal(err)
+	stripped := []string{
+		".codex",
+		filepath.Join(".config", "opencode"),
+		filepath.Join(".pi", "agent"),
 	}
+	markPresent(t, home, ".claude")
+	for _, dir := range stripped {
+		markPresent(t, home, dir)
+	}
+
+	for _, r := range Install(testSkill, home) {
+		if r.Status != StatusInstalled {
+			t.Errorf("%s status = %q, want installed (%+v)", r.Name, r.Status, r)
+		}
+	}
+
 	want := `---
 name: yt
 description: "Interact with YouTrack: issues, boards."
@@ -149,8 +156,14 @@ description: "Interact with YouTrack: issues, boards."
 
 Body mentioning allowed-tools stays put.
 `
-	if string(codex) != want {
-		t.Errorf("codex skill:\ngot:\n%s\nwant:\n%s", codex, want)
+	for _, dir := range stripped {
+		got, err := os.ReadFile(filepath.Join(home, dir, "skills", "yt", "SKILL.md"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if string(got) != want {
+			t.Errorf("%s skill:\ngot:\n%s\nwant:\n%s", dir, got, want)
+		}
 	}
 
 	claude, err := os.ReadFile(filepath.Join(home, ".claude", "skills", "yt", "SKILL.md"))

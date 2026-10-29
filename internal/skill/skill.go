@@ -1,5 +1,5 @@
 // Package skill installs the yt skill definition for coding agents that read
-// SKILL.md files, such as Claude Code and Codex.
+// SKILL.md files, such as Claude Code, Codex, opencode, and pi.
 package skill
 
 import (
@@ -19,7 +19,7 @@ const Dir = "yt"
 type Target struct {
 	Name string // human label, shown in the summary
 
-	configDir string   // agent config dir, relative to $HOME
+	configDir string   // agent config dir, relative to $HOME; skills/ lives here
 	binary    string   // executable that proves the agent is installed
 	keep      []string // frontmatter keys this agent understands; nil keeps all
 	legacy    []string // stale files (relative to $HOME) removed on install
@@ -39,6 +39,18 @@ func Targets() []Target {
 			Name:      "Codex",
 			configDir: ".codex",
 			binary:    "codex",
+			keep:      []string{"name", "description"},
+		},
+		{
+			Name:      "opencode",
+			configDir: filepath.Join(".config", "opencode"),
+			binary:    "opencode",
+			keep:      []string{"name", "description"},
+		},
+		{
+			Name:      "pi",
+			configDir: filepath.Join(".pi", "agent"),
+			binary:    "pi",
 			keep:      []string{"name", "description"},
 		},
 	}
