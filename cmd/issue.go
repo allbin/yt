@@ -9,7 +9,8 @@ var issueCmd = &cobra.Command{
 	Use:   "issue [id]",
 	Short: "Show or manage YouTrack issues",
 	Long: `Fetch a single YouTrack issue by its readable ID (e.g. PROJ-123) and display
-its summary, state, assignee, priority, type, subsystems, tags, and description.
+its summary, state, assignee, priority, type, subsystems, tags, description,
+board membership, and the knowledge base articles that mention it.
 
 If no ID is given, attempts to detect it from the current git branch name.
 
@@ -50,6 +51,10 @@ func runIssue(cmd *cobra.Command, args []string) error {
 	// transient board error never blocks displaying the issue itself.
 	if boards, err := client.IssueBoards(id); err == nil {
 		issue.Boards = boards
+	}
+	// Same for the knowledge base articles that mention the issue.
+	if articles, err := client.ArticlesMentioning(id); err == nil {
+		issue.Articles = articles
 	}
 
 	w := cmd.OutOrStdout()

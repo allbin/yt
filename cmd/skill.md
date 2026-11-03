@@ -1,6 +1,6 @@
 ---
 name: yt
-description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, see who moved which cards between states (e.g. for a standup), attach a file or download an attachment, add a value to a project field, or branch from an issue."
+description: "Read and change YouTrack issues, boards, and sprints with the yt CLI. Use when an issue key appears (e.g. PROJ-123), or the user wants to search issues, create or update an issue, set custom fields, make a subtask, comment, link issues, put an issue on a board or sprint, check board status, see who moved which cards between states (e.g. for a standup), attach a file or download an attachment, add a value to a project field, or branch from an issue. Also for the knowledge base: when an article key appears (e.g. PROJ-A-12) or the user wants to read, search, write, or append to articles, wiki pages, or meeting notes."
 allowed-tools: Bash(yt *)
 ---
 
@@ -27,8 +27,9 @@ yt issue list --json          # -p project, -s state, -a assignee, -q query, -n 
 yt issue comments <ID> --json
 ```
 
-`yt issue <ID>` includes the issue's links, board/sprint membership, and
-attachments, so it usually answers a question in one call.
+`yt issue <ID>` includes the issue's links, board/sprint membership,
+attachments, and the knowledge base articles that mention it, so it usually
+answers a question in one call.
 
 A full `--json` list carries every description, so beyond about 50 issues it
 is too big to read in one go. Use `--json --compact` for a scan (one small
@@ -216,6 +217,46 @@ yt attachment upload <ID> <file>... [--name stored.csv] --json
 Upload answers with each attachment's id, name and size; `download` finds it
 by that name. An uploaded image can be shown in a description or comment as
 `![](name.png)`.
+
+## Knowledge base articles
+
+Articles are markdown pages in a project's knowledge base, nested in a tree.
+Their IDs carry `-A-` (`PROJ-A-12`); `yt article` refuses an issue ID.
+
+```bash
+yt article list -p PROJ --json             # metadata only, no content; -q searches, -n limit
+yt article list --parent PROJ-A-3 --json   # direct sub-articles
+yt article <ID> --json                     # content, parent, childArticles, mentionedIssues, attachments
+yt article create -p PROJ -s "Title" -c @notes.md [--parent PROJ-A-3] --json
+yt article update <ID> [-s title] [-c @file | --append @file] --json
+yt article comment <ID> -m "text"
+yt article comments <ID> --json
+yt article delete <ID> --yes
+```
+
+`-q` takes free text or `mentions: PROJ-123`. With `--parent`, `create` puts
+the article in the parent's project, so `-p` is optional. `--content` replaces
+the whole content; `--append` adds after it with a blank line between.
+Append reads then writes, so a save by someone else in between is lost: give
+concurrent note-takers their own sub-article.
+
+An issue ID written in an article's content becomes a mention, which is the
+only link between articles and issues. The article lists it under
+`mentionedIssues`, and `yt issue <ID> --json` lists the article under
+`articles`. To tie meeting notes to issues, write the IDs in the notes; to
+find the notes behind an issue, read its `articles`.
+
+Deleting cannot be undone: `delete` needs `--yes` and refuses an article that
+has sub-articles. Ask the user before deleting an article you did not create
+in this session.
+
+Attachments on articles use the same commands as issues, with the article ID:
+`yt attachment upload PROJ-A-12 photo.jpg`, `yt attachment download PROJ-A-12
+photo.jpg`.
+
+When presenting an article, lead with ID and title, then parent and project,
+then the content; list mentioned issues with their summaries when they
+matter to the question.
 
 ## Git branches
 

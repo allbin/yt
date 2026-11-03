@@ -29,7 +29,8 @@ Environment variables take precedence over the config file.
 
 ### SEE ALSO
 
-* [yt attachment](yt_attachment.md)	 - Manage issue attachments
+* [yt article](yt_article.md)	 - Show or manage knowledge base articles
+* [yt attachment](yt_attachment.md)	 - Manage issue and article attachments
 * [yt board](yt_board.md)	 - Show board issues or list boards
 * [yt branch](yt_branch.md)	 - Create git branch from issue
 * [yt install](yt_install.md)	 - Install shell completions and agent skills

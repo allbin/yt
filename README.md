@@ -48,6 +48,14 @@ yt board HållKoll -s "In Review" --json
 yt board 124-66            # by id or URL, for a board missing from the list
 yt board https://example.youtrack.cloud/agiles/124-66/current
 
+# Knowledge base articles
+yt article list -p PROJ                    # tree of a project's articles
+yt article list -q "mentions: PROJ-123"
+yt article PROJ-A-12
+yt article create --parent PROJ-A-3 -s "Planning 2026-11-03" -c @notes.md
+yt article update PROJ-A-12 --append "- follow up in PROJ-123"
+yt attachment upload PROJ-A-12 whiteboard.jpg
+
 # Git integration
 yt branch PROJ-123         # creates proj-123-slugified-summary
 yt branch PROJ-123 --no-slug

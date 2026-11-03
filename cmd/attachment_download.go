@@ -11,15 +11,19 @@ import (
 var attachmentOutput string
 
 var attachmentDownloadCmd = &cobra.Command{
-	Use:   "download <issueID> <filename>",
-	Short: "Download an attachment from an issue",
-	Long: `Download an attachment by filename from a YouTrack issue.
+	Use:   "download <id> <filename>",
+	Short: "Download an attachment from an issue or article",
+	Long: `Download an attachment by filename from a YouTrack issue or knowledge base
+article (PROJ-A-12).
 If multiple attachments share the same name, the first match is downloaded.`,
 	Example: `  # download to current directory
   yt attachment download PROJ-123 report.csv
 
   # download to specific path
-  yt attachment download PROJ-123 photo.png --output /tmp/photo.png`,
+  yt attachment download PROJ-123 photo.png --output /tmp/photo.png
+
+  # from an article
+  yt attachment download PROJ-A-12 whiteboard.jpg`,
 	Args: cobra.ExactArgs(2),
 	RunE: runAttachmentDownload,
 }

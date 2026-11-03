@@ -60,6 +60,18 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		transitionsQuery = ""
 		loginURL = ""
 		loginToken = ""
+		articleListProject = ""
+		articleListQuery = ""
+		articleListParent = ""
+		articleListLimit = 100
+		articleCreateProject = ""
+		articleCreateSummary = ""
+		articleCreateContent = ""
+		articleCreateParent = ""
+		articleUpdateSummary = ""
+		articleUpdateContent = ""
+		articleUpdateAppend = ""
+		articleDeleteYes = false
 		// Reset cobra's Changed state on all flags.
 		rootCmd.Flags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
 		rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })

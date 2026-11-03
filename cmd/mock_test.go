@@ -57,6 +57,14 @@ type mockAPI struct {
 	activities     []youtrack.FieldActivity
 	activityFilter youtrack.FieldActivityFilter
 	boardIssues    []string
+
+	articles        map[string]*youtrack.Article // by readable ID
+	articleList     []youtrack.Article
+	articleQuery    string
+	mentioning      []youtrack.ArticleRef
+	createdArticle  *youtrack.NewArticle
+	updatedArticle  map[string]string
+	deletedArticles []string
 }
 
 func (m *mockAPI) CurrentUser() (*youtrack.User, error) {
@@ -190,4 +198,32 @@ func (m *mockAPI) UploadAttachments(_ string, files []youtrack.UploadFile) ([]yo
 		out = append(out, youtrack.Attachment{Name: f.Name})
 	}
 	return out, nil
+}
+
+func (m *mockAPI) GetArticle(id string) (*youtrack.Article, error) {
+	a, ok := m.articles[id]
+	if !ok {
+		return nil, &youtrack.APIError{StatusCode: 404, Body: `{"error_description":"Can't find article"}`}
+	}
+	return a, nil
+}
+func (m *mockAPI) ListArticles(query string, _ int) ([]youtrack.Article, error) {
+	m.articleQuery = query
+	return m.articleList, nil
+}
+func (m *mockAPI) ListChildArticles(string) ([]youtrack.Article, error) { return m.articleList, nil }
+func (m *mockAPI) ArticlesMentioning(string) ([]youtrack.ArticleRef, error) {
+	return m.mentioning, nil
+}
+func (m *mockAPI) CreateArticle(n youtrack.NewArticle) (*youtrack.Article, error) {
+	m.createdArticle = &n
+	return &youtrack.Article{IDReadable: n.Project + "-A-99", Summary: n.Summary}, nil
+}
+func (m *mockAPI) UpdateArticle(_ string, fields map[string]string) error {
+	m.updatedArticle = fields
+	return nil
+}
+func (m *mockAPI) DeleteArticle(id string) error {
+	m.deletedArticles = append(m.deletedArticles, id)
+	return nil
 }

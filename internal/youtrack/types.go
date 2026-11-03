@@ -19,6 +19,7 @@ type Issue struct {
 	Attachments  []Attachment      `json:"attachments"`
 	Links        []IssueLink       `json:"links,omitempty"`
 	Boards       []BoardMembership `json:"boards,omitempty"`
+	Articles     []ArticleRef      `json:"articles,omitempty"` // knowledge base articles mentioning the issue
 }
 
 // MarshalJSON adds "fields", the custom fields flattened to one value each,

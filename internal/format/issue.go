@@ -59,7 +59,7 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 
 	ew.printf("%s  %s\n", StyleID.Render(v.ID), StyleBold.Render(v.Summary))
 
-	hasMeta := v.State != "" || v.Assignee != "" || v.Priority != "" || v.Type != "" || v.Subsystem != "" || v.Tags != "" || len(issue.Links) > 0 || len(issue.Boards) > 0
+	hasMeta := v.State != "" || v.Assignee != "" || v.Priority != "" || v.Type != "" || v.Subsystem != "" || v.Tags != "" || len(issue.Links) > 0 || len(issue.Boards) > 0 || len(issue.Articles) > 0
 	if hasMeta {
 		ew.println()
 	}
@@ -91,6 +91,7 @@ func Issue(w io.Writer, issue *youtrack.Issue) error {
 		}
 		ew.printf("  %s %s\n", label, boardMembership(m))
 	}
+	refList(ew, "Articles", issue.Articles)
 
 	if v.Description != "" {
 		ew.println()

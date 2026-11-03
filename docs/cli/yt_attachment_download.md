@@ -1,14 +1,15 @@
 ## yt attachment download
 
-Download an attachment from an issue
+Download an attachment from an issue or article
 
 ### Synopsis
 
-Download an attachment by filename from a YouTrack issue.
+Download an attachment by filename from a YouTrack issue or knowledge base
+article (PROJ-A-12).
 If multiple attachments share the same name, the first match is downloaded.
 
 ```
-yt attachment download <issueID> <filename> [flags]
+yt attachment download <id> <filename> [flags]
 ```
 
 ### Examples
@@ -19,6 +20,9 @@ yt attachment download <issueID> <filename> [flags]
 
   # download to specific path
   yt attachment download PROJ-123 photo.png --output /tmp/photo.png
+
+  # from an article
+  yt attachment download PROJ-A-12 whiteboard.jpg
 ```
 
 ### Options
@@ -36,5 +40,5 @@ yt attachment download <issueID> <filename> [flags]
 
 ### SEE ALSO
 
-* [yt attachment](yt_attachment.md)	 - Manage issue attachments
+* [yt attachment](yt_attachment.md)	 - Manage issue and article attachments
 

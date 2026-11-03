@@ -8,12 +8,12 @@ import (
 
 const commentFields = "id,text,author(login,fullName),created,updated"
 
-func (c *Client) ListComments(issueID string) ([]Comment, error) {
+func (c *Client) ListComments(id string) ([]Comment, error) {
 	params := url.Values{"fields": {commentFields}}
 
-	data, err := c.get("/api/issues/"+url.PathEscape(issueID)+"/comments", params)
+	data, err := c.get(entityPath(id)+"/comments", params)
 	if err != nil {
-		return nil, fmt.Errorf("list comments for %s: %w", issueID, err)
+		return nil, fmt.Errorf("list comments for %s: %w", id, err)
 	}
 
 	var comments []Comment
@@ -24,17 +24,17 @@ func (c *Client) ListComments(issueID string) ([]Comment, error) {
 	return comments, nil
 }
 
-func (c *Client) AddComment(issueID, text string) (*Comment, error) {
+func (c *Client) AddComment(id, text string) (*Comment, error) {
 	body := struct {
 		Text string `json:"text"`
 	}{Text: text}
 
 	params := url.Values{"fields": {commentFields}}
-	path := "/api/issues/" + url.PathEscape(issueID) + "/comments?" + params.Encode()
+	path := entityPath(id) + "/comments?" + params.Encode()
 
 	data, err := c.postJSON(path, body)
 	if err != nil {
-		return nil, fmt.Errorf("add comment to %s: %w", issueID, err)
+		return nil, fmt.Errorf("add comment to %s: %w", id, err)
 	}
 
 	var comment Comment

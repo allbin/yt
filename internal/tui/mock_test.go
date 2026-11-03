@@ -68,13 +68,20 @@ func (m *mockAPI) GetFieldValues(string, string) ([]youtrack.BundleValue, error)
 func (m *mockAPI) GetProjectFieldValues(string, string) ([]youtrack.BundleValue, error) {
 	return nil, nil
 }
-func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error) { return nil, nil }
-func (m *mockAPI) ListFieldNames(string) ([]string, error)                   { return nil, nil }
-func (m *mockAPI) ListLinkTypes() ([]youtrack.LinkType, error)               { return nil, nil }
-func (m *mockAPI) CreateLink(string, string, string) error                   { return nil }
-func (m *mockAPI) RemoveLink(string, string, string) error                   { return nil }
-func (m *mockAPI) ListIssueFields(string) ([]youtrack.ProjectField, error)   { return nil, nil }
-func (m *mockAPI) AddBundleValue(youtrack.ProjectField, string) error        { return nil }
+func (m *mockAPI) ListProjectFields(string) ([]youtrack.ProjectField, error)    { return nil, nil }
+func (m *mockAPI) ListFieldNames(string) ([]string, error)                      { return nil, nil }
+func (m *mockAPI) ListLinkTypes() ([]youtrack.LinkType, error)                  { return nil, nil }
+func (m *mockAPI) CreateLink(string, string, string) error                      { return nil }
+func (m *mockAPI) RemoveLink(string, string, string) error                      { return nil }
+func (m *mockAPI) GetArticle(string) (*youtrack.Article, error)                 { return nil, nil }
+func (m *mockAPI) ListArticles(string, int) ([]youtrack.Article, error)         { return nil, nil }
+func (m *mockAPI) ListChildArticles(string) ([]youtrack.Article, error)         { return nil, nil }
+func (m *mockAPI) ArticlesMentioning(string) ([]youtrack.ArticleRef, error)     { return nil, nil }
+func (m *mockAPI) CreateArticle(youtrack.NewArticle) (*youtrack.Article, error) { return nil, nil }
+func (m *mockAPI) UpdateArticle(string, map[string]string) error                { return nil }
+func (m *mockAPI) DeleteArticle(string) error                                   { return nil }
+func (m *mockAPI) ListIssueFields(string) ([]youtrack.ProjectField, error)      { return nil, nil }
+func (m *mockAPI) AddBundleValue(youtrack.ProjectField, string) error           { return nil }
 func (m *mockAPI) UploadAttachments(string, []youtrack.UploadFile) ([]youtrack.Attachment, error) {
 	return nil, nil
 }

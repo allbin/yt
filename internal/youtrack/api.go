@@ -14,8 +14,10 @@ type API interface {
 	CurrentUser() (*User, error)
 	ResolveUser(query string) (string, error)
 	UpdateIssueFields(id string, core map[string]string, custom []FieldUpdate) error
-	ListComments(issueID string) ([]Comment, error)
-	AddComment(issueID, text string) (*Comment, error)
+	// ListComments, AddComment, ListAttachments and UploadAttachments take
+	// an issue ID (PROJ-12) or an article ID (PROJ-A-12).
+	ListComments(id string) ([]Comment, error)
+	AddComment(id, text string) (*Comment, error)
 	CreateIssue(n NewIssue) (*Issue, error)
 	ListTags(query string) ([]Tag, error)
 	CreateTag(name string) (*Tag, error)
@@ -37,10 +39,17 @@ type API interface {
 	BoardIssues(board *Agile) ([]string, error)
 	ListBoardIssues(board *Agile, sprint *Sprint, filter string) ([]Issue, error)
 	ListFieldActivities(f FieldActivityFilter) ([]FieldActivity, error)
-	ListAttachments(issueID string) ([]Attachment, error)
+	ListAttachments(id string) ([]Attachment, error)
 	DownloadAttachment(url string, w io.Writer) error
-	UploadAttachments(issueID string, files []UploadFile) ([]Attachment, error)
+	UploadAttachments(id string, files []UploadFile) ([]Attachment, error)
 	ListLinkTypes() ([]LinkType, error)
 	CreateLink(sourceID, phrase, targetID string) error
 	RemoveLink(sourceID, linkID, targetID string) error
+	GetArticle(id string) (*Article, error)
+	ListArticles(query string, limit int) ([]Article, error)
+	ListChildArticles(id string) ([]Article, error)
+	ArticlesMentioning(issueID string) ([]ArticleRef, error)
+	CreateArticle(n NewArticle) (*Article, error)
+	UpdateArticle(id string, fields map[string]string) error
+	DeleteArticle(id string) error
 }

@@ -5,7 +5,8 @@ Show or manage YouTrack issues
 ### Synopsis
 
 Fetch a single YouTrack issue by its readable ID (e.g. PROJ-123) and display
-its summary, state, assignee, priority, type, subsystems, tags, and description.
+its summary, state, assignee, priority, type, subsystems, tags, description,
+board membership, and the knowledge base articles that mention it.
 
 If no ID is given, attempts to detect it from the current git branch name.
 

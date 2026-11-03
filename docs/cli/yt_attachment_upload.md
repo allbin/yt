@@ -1,18 +1,20 @@
 ## yt attachment upload
 
-Attach files to an issue
+Attach files to an issue or article
 
 ### Synopsis
 
-Upload one or more local files as attachments on a YouTrack issue. Each
+Upload one or more local files as attachments on a YouTrack issue or
+knowledge base article (PROJ-A-12). Each
 attachment is named after its file's base name; --name stores a single file
 under another name. All files are opened before anything is sent, so a
 missing file uploads nothing.
 
-Reference an uploaded image in a description or comment as ![](name.png).
+Reference an uploaded image in a description, article, or comment as
+![](name.png).
 
 ```
-yt attachment upload <issueID> <file>... [flags]
+yt attachment upload <id> <file>... [flags]
 ```
 
 ### Examples
@@ -23,6 +25,9 @@ yt attachment upload <issueID> <file>... [flags]
 
   # attach several files
   yt attachment upload PROJ-123 log.txt trace.json
+
+  # attach a whiteboard photo to meeting notes
+  yt attachment upload PROJ-A-12 whiteboard.jpg
 
   # store /tmp/out.csv as report.csv
   yt attachment upload PROJ-123 /tmp/out.csv --name report.csv
@@ -46,5 +51,5 @@ yt attachment upload <issueID> <file>... [flags]
 
 ### SEE ALSO
 
-* [yt attachment](yt_attachment.md)	 - Manage issue attachments
+* [yt attachment](yt_attachment.md)	 - Manage issue and article attachments
 
