@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"slices"
 	"strconv"
+	"strings"
 )
 
 // Article is a knowledge base article. Content is markdown, like an issue's
@@ -43,7 +44,7 @@ type ArticleRef struct {
 // articleIDPattern matches a readable article ID: the project short name, -A-,
 // a number (VIU-A-14). A short name cannot hold a hyphen, so an issue ID
 // (VIU-14) never matches.
-var articleIDPattern = regexp.MustCompile(`^[A-Za-z0-9_]+-A-[0-9]+$`)
+var articleIDPattern = regexp.MustCompile(`(?i)^[a-z0-9_]+-a-[0-9]+$`)
 
 // IsArticleID reports whether id is a readable article ID.
 func IsArticleID(id string) bool { return articleIDPattern.MatchString(id) }
@@ -105,8 +106,12 @@ func (c *Client) ListArticles(query string, limit int) ([]Article, error) {
 }
 
 // ListChildArticles lists the direct sub-articles of id.
-func (c *Client) ListChildArticles(id string) ([]Article, error) {
-	data, err := c.get("/api/articles/"+url.PathEscape(id)+"/childArticles", url.Values{"fields": {articleListFields}})
+func (c *Client) ListChildArticles(id string, limit int) ([]Article, error) {
+	params := url.Values{"fields": {articleListFields}}
+	if limit > 0 {
+		params.Set("$top", strconv.Itoa(limit))
+	}
+	data, err := c.get("/api/articles/"+url.PathEscape(id)+"/childArticles", params)
 	if err != nil {
 		return nil, fmt.Errorf("list sub-articles of %s: %w", id, err)
 	}
@@ -117,30 +122,38 @@ func (c *Client) ListChildArticles(id string) ([]Article, error) {
 	return articles, nil
 }
 
-// ArticlesMentioning lists the articles whose content mentions issueID. The
-// search can match loosely, so each result is checked against the article's
-// own list of mentioned issues.
+// mentionPageSize is how many search hits ArticlesMentioning reads per request.
+var mentionPageSize = 100
+
+// ArticlesMentioning lists the articles whose content mentions issueID, a
+// readable ID. The search can match loosely, so every page of hits is read
+// and each is checked against the article's own list of mentioned issues.
 func (c *Client) ArticlesMentioning(issueID string) ([]ArticleRef, error) {
 	params := url.Values{
 		"fields": {articleRefFields + ",mentionedIssues(idReadable)"},
 		"query":  {"mentions: " + issueID},
-		"$top":   {"50"},
-	}
-	data, err := c.get("/api/articles", params)
-	if err != nil {
-		return nil, fmt.Errorf("articles mentioning %s: %w", issueID, err)
-	}
-	var found []Article
-	if err := json.Unmarshal(data, &found); err != nil {
-		return nil, fmt.Errorf("parse articles: %w", err)
+		"$top":   {strconv.Itoa(mentionPageSize)},
 	}
 	var refs []ArticleRef
-	for _, a := range found {
-		if slices.ContainsFunc(a.MentionedIssues, func(i LinkedIssue) bool { return i.IDReadable == issueID }) {
-			refs = append(refs, ArticleRef{ID: a.ID, IDReadable: a.IDReadable, Summary: a.Summary})
+	for skip := 0; ; skip += mentionPageSize {
+		params.Set("$skip", strconv.Itoa(skip))
+		data, err := c.get("/api/articles", params)
+		if err != nil {
+			return nil, fmt.Errorf("articles mentioning %s: %w", issueID, err)
+		}
+		var page []Article
+		if err := json.Unmarshal(data, &page); err != nil {
+			return nil, fmt.Errorf("parse articles: %w", err)
+		}
+		for _, a := range page {
+			if slices.ContainsFunc(a.MentionedIssues, func(i LinkedIssue) bool { return strings.EqualFold(i.IDReadable, issueID) }) {
+				refs = append(refs, ArticleRef{ID: a.ID, IDReadable: a.IDReadable, Summary: a.Summary})
+			}
+		}
+		if len(page) < mentionPageSize {
+			return refs, nil
 		}
 	}
-	return refs, nil
 }
 
 // NewArticle is what CreateArticle sends. ParentID is the parent's database

@@ -47,7 +47,7 @@ type API interface {
 	RemoveLink(sourceID, linkID, targetID string) error
 	GetArticle(id string) (*Article, error)
 	ListArticles(query string, limit int) ([]Article, error)
-	ListChildArticles(id string) ([]Article, error)
+	ListChildArticles(id string, limit int) ([]Article, error)
 	ArticlesMentioning(issueID string) ([]ArticleRef, error)
 	CreateArticle(n NewArticle) (*Article, error)
 	UpdateArticle(id string, fields map[string]string) error

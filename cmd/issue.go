@@ -53,7 +53,7 @@ func runIssue(cmd *cobra.Command, args []string) error {
 		issue.Boards = boards
 	}
 	// Same for the knowledge base articles that mention the issue.
-	if articles, err := client.ArticlesMentioning(id); err == nil {
+	if articles, err := client.ArticlesMentioning(issue.IDReadable); err == nil {
 		issue.Articles = articles
 	}
 

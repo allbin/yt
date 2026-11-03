@@ -83,7 +83,7 @@ func TestIssueShowsMentioningArticles(t *testing.T) {
 	}
 	run := setupTest(t, mock)
 
-	out, err := run("issue", "SV-12", "--json")
+	out, err := run("issue", "sv-12", "--json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,5 +93,8 @@ func TestIssueShowsMentioningArticles(t *testing.T) {
 	}
 	if len(got.Articles) != 1 || got.Articles[0].IDReadable != "SV-A-3" {
 		t.Errorf("articles = %+v", got.Articles)
+	}
+	if mock.mentioningID != "SV-12" {
+		t.Errorf("searched mentions of %q, want the canonical SV-12", mock.mentioningID)
 	}
 }

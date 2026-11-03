@@ -62,6 +62,7 @@ type mockAPI struct {
 	articleList     []youtrack.Article
 	articleQuery    string
 	mentioning      []youtrack.ArticleRef
+	mentioningID    string
 	createdArticle  *youtrack.NewArticle
 	updatedArticle  map[string]string
 	deletedArticles []string
@@ -211,8 +212,11 @@ func (m *mockAPI) ListArticles(query string, _ int) ([]youtrack.Article, error) 
 	m.articleQuery = query
 	return m.articleList, nil
 }
-func (m *mockAPI) ListChildArticles(string) ([]youtrack.Article, error) { return m.articleList, nil }
-func (m *mockAPI) ArticlesMentioning(string) ([]youtrack.ArticleRef, error) {
+func (m *mockAPI) ListChildArticles(string, int) ([]youtrack.Article, error) {
+	return m.articleList, nil
+}
+func (m *mockAPI) ArticlesMentioning(id string) ([]youtrack.ArticleRef, error) {
+	m.mentioningID = id
 	return m.mentioning, nil
 }
 func (m *mockAPI) CreateArticle(n youtrack.NewArticle) (*youtrack.Article, error) {

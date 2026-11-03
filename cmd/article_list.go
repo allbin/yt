@@ -62,7 +62,7 @@ func runArticleList(cmd *cobra.Command, _ []string) error {
 		if err != nil {
 			return err
 		}
-		articles, err = client.ListChildArticles(parent)
+		articles, err = client.ListChildArticles(parent, articleListLimit)
 		if err != nil {
 			return err
 		}
