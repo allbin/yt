@@ -43,11 +43,14 @@ For State changes across many issues, use "yt transitions".`,
   yt issue history PROJ-123 --kind description --full`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		id := issueIDFromArgs(args)
+		id, client, err := issueClient(args)
+		if err != nil {
+			return err
+		}
 		if id == "" {
 			return cmd.Help()
 		}
-		return runHistory(cmd, id)
+		return runHistory(cmd, client, id)
 	},
 }
 
@@ -73,7 +76,11 @@ the content before and after each edit. --json always carries the full text.`,
 		if err != nil {
 			return err
 		}
-		return runHistory(cmd, id)
+		client, err := apiFactory()
+		if err != nil {
+			return err
+		}
+		return runHistory(cmd, client, id)
 	},
 }
 
@@ -86,11 +93,7 @@ func init() {
 	articleCmd.AddCommand(articleHistoryCmd)
 }
 
-func runHistory(cmd *cobra.Command, id string) error {
-	client, err := apiFactory()
-	if err != nil {
-		return err
-	}
+func runHistory(cmd *cobra.Command, client youtrack.API, id string) error {
 	entries, err := client.History(id)
 	if err != nil {
 		return err

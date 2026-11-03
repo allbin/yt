@@ -579,3 +579,40 @@ func TestRunIssueShowsQueryBoardMembership(t *testing.T) {
 		t.Errorf("JSON membership should carry kind and no sprint: %s", out)
 	}
 }
+
+// A branch's issue ID counts only when its prefix is a project: an Agentique
+// worktree branch like session-996d05d2 is not issue SESSION-996.
+func TestIssueFromBranchNeedsProject(t *testing.T) {
+	tests := []struct {
+		branch, wantID, wantErr string
+	}{
+		{"ax-12-fix-login", "AX-12", ""},
+		{"session-996d05d2", "", "SESSION is not a project"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.branch, func(t *testing.T) {
+			orig := currentBranch
+			currentBranch = func() (string, error) { return tt.branch, nil }
+			t.Cleanup(func() { currentBranch = orig })
+			mock := &mockAPI{
+				projects: []youtrack.Project{{ShortName: "AX"}},
+				issue:    &youtrack.Issue{IDReadable: "AX-12"},
+			}
+			run := setupTest(t, mock)
+
+			out, err := run("issue", "--json")
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Errorf("err = %v, want %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(out, `"idReadable": "`+tt.wantID+`"`) {
+				t.Errorf("out = %s", out)
+			}
+		})
+	}
+}

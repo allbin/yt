@@ -37,14 +37,12 @@ func runIssueView(cmd *cobra.Command, args []string) error {
 		return runIssue(cmd, args)
 	}
 
-	id := issueIDFromArgs(args)
-	if id == "" {
-		return cmd.Help()
-	}
-
-	client, err := apiFactory()
+	id, client, err := issueClient(args)
 	if err != nil {
 		return err
+	}
+	if id == "" {
+		return cmd.Help()
 	}
 
 	viewer := tui.NewIssueViewer(client, id)

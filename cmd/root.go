@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -96,17 +97,44 @@ func newClient() (youtrack.API, error) {
 	return youtrack.NewClient(u, token), nil
 }
 
-// issueIDFromArgs resolves an issue ID from command args or the current git branch.
-// Returns "" if no ID could be determined.
-func issueIDFromArgs(args []string) string {
+// issueClient returns the issue ID from the command args or, without one,
+// from the current git branch, with the client to fetch it. An empty ID
+// with a nil error means neither names an issue, and the caller shows help.
+//
+// Any branch that starts with word-number looks like an issue ID
+// (session-996d05d2 reads as SESSION-996), so a branch's ID counts only when
+// its prefix is a project's short name.
+// currentBranch is the git branch lookup, replaced in tests.
+var currentBranch = git.CurrentBranch
+
+func issueClient(args []string) (string, youtrack.API, error) {
+	id, branch := "", ""
 	if len(args) > 0 {
-		return args[0]
+		id = args[0]
+	} else if b, err := currentBranch(); err == nil {
+		branch = b
+		id = git.IssueFromBranch(b)
 	}
-	branch, err := git.CurrentBranch()
+	if id == "" {
+		return "", nil, nil
+	}
+
+	client, err := apiFactory()
 	if err != nil {
-		return ""
+		return "", nil, err
 	}
-	return git.IssueFromBranch(branch)
+	if branch == "" {
+		return id, client, nil
+	}
+	projects, err := client.ListProjects()
+	if err != nil {
+		return "", nil, err
+	}
+	prefix, _, _ := strings.Cut(id, "-")
+	if !slices.ContainsFunc(projects, func(p youtrack.Project) bool { return strings.EqualFold(p.ShortName, prefix) }) {
+		return "", nil, fmt.Errorf("no issue ID given, and branch %q names none (%s is not a project); pass the issue ID", branch, prefix)
+	}
+	return id, client, nil
 }
 
 // resolveAssignee converts a user-provided assignee value (full name, partial,

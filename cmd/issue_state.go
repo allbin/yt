@@ -35,14 +35,12 @@ func init() {
 }
 
 func runIssueState(cmd *cobra.Command, args []string) error {
-	id := issueIDFromArgs(args)
-	if id == "" {
-		return cmd.Help()
-	}
-
-	client, err := apiFactory()
+	id, client, err := issueClient(args)
 	if err != nil {
 		return err
+	}
+	if id == "" {
+		return cmd.Help()
 	}
 
 	issue, err := client.GetIssue(id)
