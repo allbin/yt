@@ -18,10 +18,11 @@ The message accepts "@path" to read from a file or "-" to read from stdin.`,
   yt article comment PROJ-A-12 -m @comment.md --json`,
 	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if _, err := articleIDArg(args[0]); err != nil {
+		id, err := articleIDArg(args[0])
+		if err != nil {
 			return err
 		}
-		return runIssueComment(cmd, args)
+		return runIssueComment(cmd, []string{id})
 	},
 }
 
@@ -32,10 +33,11 @@ var articleCommentsCmd = &cobra.Command{
 	Example: `  yt article comments PROJ-A-12 --json`,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if _, err := articleIDArg(args[0]); err != nil {
+		id, err := articleIDArg(args[0])
+		if err != nil {
 			return err
 		}
-		return runIssueComments(cmd, args)
+		return runIssueComments(cmd, []string{id})
 	},
 }
 

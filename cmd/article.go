@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/allbin/yt/internal/format"
 	"github.com/allbin/yt/internal/youtrack"
@@ -52,9 +53,10 @@ func runArticle(cmd *cobra.Command, args []string) error {
 
 // articleIDArg refuses an ID that is not an article's, so an issue ID given
 // by mistake errors here instead of as an article the server cannot find.
+// The server finds articles by the upper-case ID only.
 func articleIDArg(id string) (string, error) {
 	if !youtrack.IsArticleID(id) {
 		return "", fmt.Errorf("%q is not an article ID (articles look like PROJ-A-12)", id)
 	}
-	return id, nil
+	return strings.ToUpper(id), nil
 }

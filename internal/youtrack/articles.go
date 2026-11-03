@@ -53,7 +53,7 @@ func IsArticleID(id string) bool { return articleIDPattern.MatchString(id) }
 // attachments live under either, so the ID alone picks the endpoint.
 func entityPath(id string) string {
 	if IsArticleID(id) {
-		return "/api/articles/" + url.PathEscape(id)
+		return "/api/articles/" + url.PathEscape(strings.ToUpper(id))
 	}
 	return "/api/issues/" + url.PathEscape(id)
 }
