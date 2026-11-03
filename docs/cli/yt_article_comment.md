@@ -9,6 +9,8 @@ via the --message flag.
 
 The message accepts "@path" to read from a file or "-" to read from stdin.
 
+"edit" and "delete" change or remove an existing comment by its ID.
+
 ```
 yt article comment <id> [flags]
 ```
@@ -39,4 +41,6 @@ yt article comment <id> [flags]
 ### SEE ALSO
 
 * [yt article](yt_article.md)	 - Show or manage knowledge base articles
+* [yt article comment delete](yt_article_comment_delete.md)	 - Delete a comment on an article
+* [yt article comment edit](yt_article_comment_edit.md)	 - Replace the text of a comment on an article
 

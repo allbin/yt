@@ -10,7 +10,9 @@ var articleCommentCmd = &cobra.Command{
 	Long: `Post a new comment on a knowledge base article. The comment text is provided
 via the --message flag.
 
-The message accepts "@path" to read from a file or "-" to read from stdin.`,
+The message accepts "@path" to read from a file or "-" to read from stdin.
+
+"edit" and "delete" change or remove an existing comment by its ID.`,
 	Example: `  # add a comment
   yt article comment PROJ-A-12 -m "Action items moved to PROJ-123."
 

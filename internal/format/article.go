@@ -30,6 +30,9 @@ func Article(w io.Writer, a *youtrack.Article) error {
 		}
 		ew.printf("  %s %s\n", StyleLabel.Render("Tags"), StyleDim.Render(strings.Join(names, ", ")))
 	}
+	if v := a.Visibility; v != nil && v.Limited {
+		ew.printf("  %s %s\n", StyleLabel.Render("Visible to"), strings.Join(append(slices.Clone(v.Users), v.Groups...), ", "))
+	}
 	if a.Updated > 0 {
 		updated := time.UnixMilli(a.Updated).Format("2006-01-02 15:04")
 		if a.UpdatedBy != nil {

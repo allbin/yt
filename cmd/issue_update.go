@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/allbin/yt/internal/format"
 	"github.com/allbin/yt/internal/youtrack"
@@ -180,19 +179,9 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 			return err
 		}
 	}
-	add, err := lookupAddTags(client, updateTags, updateCreateTag)
+	tags, err := planTags(client, updateTags, updateCreateTag, updateRemoveTags)
 	if err != nil {
 		return err
-	}
-	removeTags, err := lookupRemoveTags(client, updateRemoveTags)
-	if err != nil {
-		return err
-	}
-	// A name to create cannot also be removed: removal needs an existing tag.
-	for _, t := range add.found {
-		if slices.ContainsFunc(removeTags, func(r youtrack.Tag) bool { return r.ID == t.ID }) {
-			return fmt.Errorf("tag %q is in both --tag and --remove-tag", t.Name)
-		}
 	}
 
 	// Summary, description and custom fields go in one request: the server
@@ -205,12 +194,8 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 
 	// New tags are created only now, after every check and the field write
 	// passed, so a failed update leaves no stray tag behind.
-	created, err := createMissingTags(client, add.missing)
+	addTags, err := tags.apply(client, id)
 	if err != nil {
-		return err
-	}
-	addTags := append(add.found, created...)
-	if err := applyTags(client, id, addTags, removeTags); err != nil {
 		return err
 	}
 
@@ -224,7 +209,7 @@ func runIssueUpdate(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := verifyTags(issue, addTags, removeTags); err != nil {
+	if err := verifyTags(issue.IDReadable, issue.Tags, addTags, tags.remove); err != nil {
 		return err
 	}
 	if boardChanged {

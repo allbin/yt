@@ -16,7 +16,9 @@ var commentCmd = &cobra.Command{
 via the --message flag.
 
 The message accepts "@path" to read from a file or "-" to read from stdin,
-which avoids shell mangling of multi-line text.`,
+which avoids shell mangling of multi-line text.
+
+"edit" and "delete" change or remove an existing comment by its ID.`,
 	Example: `  # add a comment
   yt issue comment PROJ-123 -m "Looks good, merging."
 

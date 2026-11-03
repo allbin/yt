@@ -18,11 +18,14 @@ type API interface {
 	// an issue ID (PROJ-12) or an article ID (PROJ-A-12).
 	ListComments(id string) ([]Comment, error)
 	AddComment(id, text string) (*Comment, error)
+	UpdateComment(id, commentID, text string) (*Comment, error)
+	DeleteComment(id, commentID string) error
 	CreateIssue(n NewIssue) (*Issue, error)
 	ListTags(query string) ([]Tag, error)
 	CreateTag(name string) (*Tag, error)
-	TagIssue(issueID, tagID string) error
-	UntagIssue(issueID, tagID string) error
+	// AddTag and RemoveTag take an issue or article ID.
+	AddTag(id, tagID string) error
+	RemoveTag(id, tagID string) error
 	GetIssueStates(issueID string) ([]StateBundleElement, error)
 	SetIssueState(issueID, stateName string) error
 	GetFieldValues(issueID, fieldName string) ([]BundleValue, error)
@@ -50,6 +53,7 @@ type API interface {
 	ListChildArticles(id string, limit int) ([]Article, error)
 	ArticlesMentioning(issueID string) ([]ArticleRef, error)
 	CreateArticle(n NewArticle) (*Article, error)
-	UpdateArticle(id string, fields map[string]string) error
+	UpdateArticle(id string, u ArticleUpdate) error
 	DeleteArticle(id string) error
+	History(id string) ([]HistoryEntry, error)
 }

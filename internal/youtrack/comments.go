@@ -44,3 +44,31 @@ func (c *Client) AddComment(id, text string) (*Comment, error) {
 
 	return &comment, nil
 }
+
+func commentPath(id, commentID string) string {
+	return entityPath(id) + "/comments/" + url.PathEscape(commentID)
+}
+
+// UpdateComment replaces a comment's text and returns the comment as saved.
+func (c *Client) UpdateComment(id, commentID, text string) (*Comment, error) {
+	body := struct {
+		Text string `json:"text"`
+	}{Text: text}
+	data, err := c.postJSON(commentPath(id, commentID)+"?fields="+url.QueryEscape(commentFields), body)
+	if err != nil {
+		return nil, fmt.Errorf("edit comment %s on %s: %w", commentID, id, err)
+	}
+	var comment Comment
+	if err := json.Unmarshal(data, &comment); err != nil {
+		return nil, fmt.Errorf("parse comment: %w", err)
+	}
+	return &comment, nil
+}
+
+// DeleteComment removes a comment permanently.
+func (c *Client) DeleteComment(id, commentID string) error {
+	if err := c.delete(commentPath(id, commentID)); err != nil {
+		return fmt.Errorf("delete comment %s on %s: %w", commentID, id, err)
+	}
+	return nil
+}

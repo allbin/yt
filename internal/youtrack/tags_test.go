@@ -61,7 +61,7 @@ func TestTagIssue(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if err := NewClient(srv.URL, "token").TagIssue("AX-1", "6-63"); err != nil {
+	if err := NewClient(srv.URL, "token").AddTag("AX-1", "6-63"); err != nil {
 		t.Fatal(err)
 	}
 	if gotPath != "POST /api/issues/AX-1/tags" {
@@ -83,7 +83,7 @@ func TestUntagIssue(t *testing.T) {
 	defer srv.Close()
 	client := NewClient(srv.URL, "token")
 
-	if err := client.UntagIssue("AX-1", "6-63"); err != nil {
+	if err := client.RemoveTag("AX-1", "6-63"); err != nil {
 		t.Fatal(err)
 	}
 	if gotPath != "DELETE /api/issues/AX-1/tags/6-63" {
@@ -92,12 +92,12 @@ func TestUntagIssue(t *testing.T) {
 
 	// A tag the issue does not carry answers 404 and is a no-op.
 	status = http.StatusNotFound
-	if err := client.UntagIssue("AX-1", "6-63"); err != nil {
+	if err := client.RemoveTag("AX-1", "6-63"); err != nil {
 		t.Errorf("404 should be a no-op, got %v", err)
 	}
 
 	status = http.StatusForbidden
-	if err := client.UntagIssue("AX-1", "6-63"); err == nil {
+	if err := client.RemoveTag("AX-1", "6-63"); err == nil {
 		t.Error("403 should be an error")
 	}
 }

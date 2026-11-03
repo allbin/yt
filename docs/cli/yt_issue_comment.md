@@ -10,6 +10,8 @@ via the --message flag.
 The message accepts "@path" to read from a file or "-" to read from stdin,
 which avoids shell mangling of multi-line text.
 
+"edit" and "delete" change or remove an existing comment by its ID.
+
 ```
 yt issue comment <id> [flags]
 ```
@@ -46,4 +48,6 @@ yt issue comment <id> [flags]
 ### SEE ALSO
 
 * [yt issue](yt_issue.md)	 - Show or manage YouTrack issues
+* [yt issue comment delete](yt_issue_comment_delete.md)	 - Delete a comment on an issue
+* [yt issue comment edit](yt_issue_comment_edit.md)	 - Replace the text of a comment on an issue
 

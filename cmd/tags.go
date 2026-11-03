@@ -172,39 +172,78 @@ func quoteTagNames(tags []youtrack.Tag) string {
 	return strings.Join(names, ", ")
 }
 
-// applyTags adds and removes tags on an issue, in that order.
+// applyTags adds and removes tags on an issue or article, in that order.
 func applyTags(client youtrack.API, issueID string, add, remove []youtrack.Tag) error {
 	for _, t := range add {
-		if err := client.TagIssue(issueID, t.ID); err != nil {
+		if err := client.AddTag(issueID, t.ID); err != nil {
 			return err
 		}
 	}
 	for _, t := range remove {
-		if err := client.UntagIssue(issueID, t.ID); err != nil {
+		if err := client.RemoveTag(issueID, t.ID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// verifyTags checks the issue as read back from the server: every added tag
-// is on it and every removed one is gone, compared by ID. A write the server
-// accepted but did not apply is an error, never a silent success.
-func verifyTags(issue *youtrack.Issue, added, removed []youtrack.Tag) error {
-	has := func(id string) bool {
-		return slices.ContainsFunc(issue.Tags, func(t youtrack.Tag) bool { return t.ID == id })
+// verifyTags checks the tags of issue or article id as read back from the
+// server: every added tag is on it and every removed one is gone, compared by
+// ID. A write the server accepted but did not apply is an error, never a
+// silent success.
+func verifyTags(id string, tags, added, removed []youtrack.Tag) error {
+	has := func(tagID string) bool {
+		return slices.ContainsFunc(tags, func(t youtrack.Tag) bool { return t.ID == tagID })
 	}
 	for _, t := range added {
 		if !has(t.ID) {
-			return fmt.Errorf("tag %q (%s) is not on %s after tagging", t.Name, t.ID, issue.IDReadable)
+			return fmt.Errorf("tag %q (%s) is not on %s after tagging", t.Name, t.ID, id)
 		}
 	}
 	for _, t := range removed {
 		if has(t.ID) {
-			return fmt.Errorf("tag %q (%s) is still on %s after untagging", t.Name, t.ID, issue.IDReadable)
+			return fmt.Errorf("tag %q (%s) is still on %s after untagging", t.Name, t.ID, id)
 		}
 	}
 	return nil
+}
+
+// tagPlan is a resolved set of --tag and --remove-tag changes, checked before
+// anything is written.
+type tagPlan struct {
+	add    tagLookup
+	remove []youtrack.Tag
+}
+
+// planTags looks up the tags to add (missing ones allowed only with create)
+// and to remove, and refuses a tag named in both.
+func planTags(client youtrack.API, add []string, create bool, remove []string) (tagPlan, error) {
+	found, err := lookupAddTags(client, add, create)
+	if err != nil {
+		return tagPlan{}, err
+	}
+	removeTags, err := lookupRemoveTags(client, remove)
+	if err != nil {
+		return tagPlan{}, err
+	}
+	// A name to create cannot also be removed: removal needs an existing tag.
+	for _, t := range found.found {
+		if slices.ContainsFunc(removeTags, func(r youtrack.Tag) bool { return r.ID == t.ID }) {
+			return tagPlan{}, fmt.Errorf("tag %q is in both --tag and --remove-tag", t.Name)
+		}
+	}
+	return tagPlan{add: found, remove: removeTags}, nil
+}
+
+// apply creates the missing tags, then adds and removes them on issue or
+// article id. It returns every tag it added, for verifyTags.
+func (p tagPlan) apply(client youtrack.API, id string) ([]youtrack.Tag, error) {
+	created, err := createMissingTags(client, p.add.missing)
+	if err != nil {
+		return nil, err
+	}
+	added := append(slices.Clone(p.add.found), created...)
+	return added, applyTags(client, id, added, p.remove)
 }
 
 // tagIDs returns the tags' IDs.

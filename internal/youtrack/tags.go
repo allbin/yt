@@ -49,29 +49,28 @@ func (c *Client) CreateTag(name string) (*Tag, error) {
 	return &tag, nil
 }
 
-// TagIssue adds a tag to an issue by the tag's ID. Adding a tag the issue
+// AddTag adds a tag to an issue or article by the tag's ID. Adding a tag it
 // already has is a no-op on the server side.
-func (c *Client) TagIssue(issueID, tagID string) error {
+func (c *Client) AddTag(id, tagID string) error {
 	body := struct {
 		ID string `json:"id"`
 	}{ID: tagID}
-	if err := c.post("/api/issues/"+url.PathEscape(issueID)+"/tags", body); err != nil {
-		return fmt.Errorf("tag %s: %w", issueID, err)
+	if err := c.post(entityPath(id)+"/tags", body); err != nil {
+		return fmt.Errorf("tag %s: %w", id, err)
 	}
 	return nil
 }
 
-// UntagIssue removes a tag from an issue by the tag's ID. A tag the issue
+// RemoveTag removes a tag from an issue or article by the tag's ID. A tag it
 // does not carry is a no-op: the server answers 404 for it.
-func (c *Client) UntagIssue(issueID, tagID string) error {
-	path := "/api/issues/" + url.PathEscape(issueID) + "/tags/" + url.PathEscape(tagID)
-	err := c.delete(path)
+func (c *Client) RemoveTag(id, tagID string) error {
+	err := c.delete(entityPath(id) + "/tags/" + url.PathEscape(tagID))
 	var apiErr *APIError
 	if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("untag %s: %w", issueID, err)
+		return fmt.Errorf("untag %s: %w", id, err)
 	}
 	return nil
 }

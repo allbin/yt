@@ -30,6 +30,38 @@ type Article struct {
 	Tags            []Tag         `json:"tags,omitempty"`
 	Attachments     []Attachment  `json:"attachments,omitempty"`
 	MentionedIssues []LinkedIssue `json:"mentionedIssues,omitempty"`
+	Visibility      *Visibility   `json:"visibility,omitempty"`
+}
+
+// Visibility says who can read an article. Nil or not Limited: everyone with
+// access to the project. Limited: only the listed users and groups.
+type Visibility struct {
+	Limited bool     `json:"limited"`
+	Users   []string `json:"users,omitempty"`  // full names, or logins
+	Groups  []string `json:"groups,omitempty"` // group names
+}
+
+// UnmarshalJSON reads the API's shape: a $type of LimitedVisibility or
+// UnlimitedVisibility, with permittedUsers and permittedGroups.
+func (v *Visibility) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type   string `json:"$type"`
+		Users  []User `json:"permittedUsers"`
+		Groups []struct {
+			Name string `json:"name"`
+		} `json:"permittedGroups"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*v = Visibility{Limited: raw.Type == "LimitedVisibility"}
+	for _, u := range raw.Users {
+		v.Users = append(v.Users, cmp.Or(u.FullName, u.Login))
+	}
+	for _, g := range raw.Groups {
+		v.Groups = append(v.Groups, g.Name)
+	}
+	return nil
 }
 
 // ArticleRef is the minimal reference to an article: a parent, a child, or
@@ -68,7 +100,8 @@ const articleDetailFields = articleListFields + ",content," +
 	"updatedBy(login,fullName),tags(id,name)," +
 	"childArticles(" + articleRefFields + ",ordinal)," +
 	"attachments(" + attachmentFields + ")," +
-	"mentionedIssues(id,idReadable,summary)"
+	"mentionedIssues(id,idReadable,summary)," +
+	"visibility($type,permittedUsers(login,fullName),permittedGroups(name))"
 
 func (c *Client) GetArticle(id string) (*Article, error) {
 	data, err := c.get("/api/articles/"+url.PathEscape(id), url.Values{"fields": {articleDetailFields}})
@@ -157,29 +190,37 @@ func (c *Client) ArticlesMentioning(issueID string) ([]ArticleRef, error) {
 }
 
 // NewArticle is what CreateArticle sends. ParentID is the parent's database
-// id (109-147), not its readable ID.
+// id (109-147), not its readable ID; tags are referenced by ID.
 type NewArticle struct {
 	Project  string // short name
 	Summary  string
 	Content  string
 	ParentID string
+	TagIDs   []string
 }
 
+type idRef struct {
+	ID string `json:"id"`
+}
+
+// CreateArticle creates an article with its tags in one request, so a
+// rejected tag creates nothing.
 func (c *Client) CreateArticle(n NewArticle) (*Article, error) {
-	type idRef struct {
-		ID string `json:"id"`
-	}
 	body := struct {
 		Project struct {
 			ShortName string `json:"shortName"`
 		} `json:"project"`
-		Summary string `json:"summary"`
-		Content string `json:"content,omitempty"`
-		Parent  *idRef `json:"parentArticle,omitempty"`
+		Summary string  `json:"summary"`
+		Content string  `json:"content,omitempty"`
+		Parent  *idRef  `json:"parentArticle,omitempty"`
+		Tags    []idRef `json:"tags,omitempty"`
 	}{Summary: n.Summary, Content: n.Content}
 	body.Project.ShortName = n.Project
 	if n.ParentID != "" {
 		body.Parent = &idRef{ID: n.ParentID}
+	}
+	for _, id := range n.TagIDs {
+		body.Tags = append(body.Tags, idRef{ID: id})
 	}
 
 	data, err := c.postJSON("/api/articles?fields="+url.QueryEscape(articleDetailFields), body)
@@ -193,10 +234,33 @@ func (c *Client) CreateArticle(n NewArticle) (*Article, error) {
 	return &a, nil
 }
 
-// UpdateArticle writes the given core fields (summary, content) in one
-// request.
-func (c *Client) UpdateArticle(id string, fields map[string]string) error {
-	if err := c.post("/api/articles/"+url.PathEscape(id), fields); err != nil {
+// ArticleUpdate is what UpdateArticle changes; a nil field is left as is.
+type ArticleUpdate struct {
+	Summary *string
+	Content *string
+	// Move is set to move the article: under the article whose database id
+	// is ParentID, or to the top level when ParentID is "".
+	Move     bool
+	ParentID string
+}
+
+// UpdateArticle writes the summary, content and parent in one request.
+func (c *Client) UpdateArticle(id string, u ArticleUpdate) error {
+	body := map[string]any{}
+	if u.Summary != nil {
+		body["summary"] = *u.Summary
+	}
+	if u.Content != nil {
+		body["content"] = *u.Content
+	}
+	if u.Move {
+		var parent *idRef
+		if u.ParentID != "" {
+			parent = &idRef{ID: u.ParentID}
+		}
+		body["parentArticle"] = parent
+	}
+	if err := c.post("/api/articles/"+url.PathEscape(id), body); err != nil {
 		return fmt.Errorf("update %s: %w", id, err)
 	}
 	return nil

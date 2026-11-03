@@ -54,6 +54,7 @@ yt article list -q "mentions: PROJ-123"
 yt article PROJ-A-12
 yt article create --parent PROJ-A-3 -s "Planning 2026-11-03" -c @notes.md
 yt article update PROJ-A-12 --append "- follow up in PROJ-123"
+yt article update PROJ-A-12 --parent PROJ-A-3 --tag meeting
 yt attachment upload PROJ-A-12 whiteboard.jpg
 
 # Git integration
@@ -63,8 +64,11 @@ yt branch PROJ-123 --no-slug
 # Projects
 yt project list
 
-# Read comments
+# Comments and history
 yt issue comments PROJ-123
+yt issue comment edit PROJ-123 4-3431 -m "Corrected text"
+yt issue comment delete PROJ-123 4-3431 --yes
+yt issue history PROJ-123 --kind field,comment
 ```
 
 All commands support `--json` for structured output.

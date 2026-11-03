@@ -36,8 +36,8 @@ func (m *mockAPI) ListComments(string) ([]youtrack.Comment, error)        { retu
 func (m *mockAPI) CreateIssue(youtrack.NewIssue) (*youtrack.Issue, error) { return nil, nil }
 func (m *mockAPI) ListTags(string) ([]youtrack.Tag, error)                { return nil, nil }
 func (m *mockAPI) CreateTag(string) (*youtrack.Tag, error)                { return nil, nil }
-func (m *mockAPI) TagIssue(string, string) error                          { return nil }
-func (m *mockAPI) UntagIssue(string, string) error                        { return nil }
+func (m *mockAPI) AddTag(string, string) error                            { return nil }
+func (m *mockAPI) RemoveTag(string, string) error                         { return nil }
 func (m *mockAPI) AddComment(string, string) (*youtrack.Comment, error)   { return nil, nil }
 func (m *mockAPI) GetIssueStates(string) ([]youtrack.StateBundleElement, error) {
 	return m.states, nil
@@ -78,10 +78,13 @@ func (m *mockAPI) ListArticles(string, int) ([]youtrack.Article, error)         
 func (m *mockAPI) ListChildArticles(string, int) ([]youtrack.Article, error)    { return nil, nil }
 func (m *mockAPI) ArticlesMentioning(string) ([]youtrack.ArticleRef, error)     { return nil, nil }
 func (m *mockAPI) CreateArticle(youtrack.NewArticle) (*youtrack.Article, error) { return nil, nil }
-func (m *mockAPI) UpdateArticle(string, map[string]string) error                { return nil }
+func (m *mockAPI) UpdateArticle(string, youtrack.ArticleUpdate) error           { return nil }
 func (m *mockAPI) DeleteArticle(string) error                                   { return nil }
 func (m *mockAPI) ListIssueFields(string) ([]youtrack.ProjectField, error)      { return nil, nil }
 func (m *mockAPI) AddBundleValue(youtrack.ProjectField, string) error           { return nil }
 func (m *mockAPI) UploadAttachments(string, []youtrack.UploadFile) ([]youtrack.Attachment, error) {
 	return nil, nil
 }
+func (m *mockAPI) UpdateComment(string, string, string) (*youtrack.Comment, error) { return nil, nil }
+func (m *mockAPI) DeleteComment(string, string) error                              { return nil }
+func (m *mockAPI) History(string) ([]youtrack.HistoryEntry, error)                 { return nil, nil }

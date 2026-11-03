@@ -44,6 +44,7 @@ yt article <id> [flags]
 * [yt article comments](yt_article_comments.md)	 - List comments on an article
 * [yt article create](yt_article_create.md)	 - Create a knowledge base article
 * [yt article delete](yt_article_delete.md)	 - Delete a knowledge base article
+* [yt article history](yt_article_history.md)	 - Show every change to an article
 * [yt article list](yt_article_list.md)	 - Search knowledge base articles
-* [yt article update](yt_article_update.md)	 - Change an article's title or content
+* [yt article update](yt_article_update.md)	 - Change an article's title, content, place, or tags
 

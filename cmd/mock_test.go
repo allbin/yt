@@ -64,7 +64,10 @@ type mockAPI struct {
 	mentioning      []youtrack.ArticleRef
 	mentioningID    string
 	createdArticle  *youtrack.NewArticle
-	updatedArticle  map[string]string
+	updatedArticle  *youtrack.ArticleUpdate
+	editedComment   string
+	deletedComments []string
+	history         []youtrack.HistoryEntry
 	deletedArticles []string
 }
 
@@ -119,11 +122,11 @@ func (m *mockAPI) CreateTag(name string) (*youtrack.Tag, error) {
 	m.createdTags = append(m.createdTags, name)
 	return &tag, nil
 }
-func (m *mockAPI) TagIssue(issueID, tagID string) error {
+func (m *mockAPI) AddTag(issueID, tagID string) error {
 	m.tagged = append(m.tagged, issueID+"|"+tagID)
 	return m.tagErr
 }
-func (m *mockAPI) UntagIssue(issueID, tagID string) error {
+func (m *mockAPI) RemoveTag(issueID, tagID string) error {
 	m.untagged = append(m.untagged, issueID+"|"+tagID)
 	return m.tagErr
 }
@@ -223,10 +226,19 @@ func (m *mockAPI) CreateArticle(n youtrack.NewArticle) (*youtrack.Article, error
 	m.createdArticle = &n
 	return &youtrack.Article{IDReadable: n.Project + "-A-99", Summary: n.Summary}, nil
 }
-func (m *mockAPI) UpdateArticle(_ string, fields map[string]string) error {
-	m.updatedArticle = fields
+func (m *mockAPI) UpdateArticle(_ string, u youtrack.ArticleUpdate) error {
+	m.updatedArticle = &u
 	return nil
 }
+func (m *mockAPI) UpdateComment(_, commentID, text string) (*youtrack.Comment, error) {
+	m.editedComment = commentID + "|" + text
+	return &youtrack.Comment{ID: commentID, Text: text}, nil
+}
+func (m *mockAPI) DeleteComment(_, commentID string) error {
+	m.deletedComments = append(m.deletedComments, commentID)
+	return nil
+}
+func (m *mockAPI) History(string) ([]youtrack.HistoryEntry, error) { return m.history, nil }
 func (m *mockAPI) DeleteArticle(id string) error {
 	m.deletedArticles = append(m.deletedArticles, id)
 	return nil

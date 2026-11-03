@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/allbin/yt/internal/youtrack"
+	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
 
@@ -71,16 +72,29 @@ func setupTest(t *testing.T, api youtrack.API) func(args ...string) (string, err
 		articleUpdateSummary = ""
 		articleUpdateContent = ""
 		articleUpdateAppend = ""
+		articleUpdateParent = ""
+		articleUpdateTags = nil
+		articleUpdateRemoveTags = nil
+		articleUpdateCreateTag = false
+		articleCreateTags = nil
+		articleCreateNewTag = false
+		commentMessage = ""
+		commentEditMessage = ""
+		commentDeleteYes = false
+		historyFull = false
+		historyKinds = nil
 		articleDeleteYes = false
 		// Reset cobra's Changed state on all flags.
 		rootCmd.Flags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
 		rootCmd.PersistentFlags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
-		for _, c := range rootCmd.Commands() {
+		var reset func(c *cobra.Command)
+		reset = func(c *cobra.Command) {
 			c.Flags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
 			for _, sc := range c.Commands() {
-				sc.Flags().VisitAll(func(f *pflag.Flag) { f.Changed = false })
+				reset(sc)
 			}
 		}
+		reset(rootCmd)
 	}
 
 	return func(args ...string) (string, error) {

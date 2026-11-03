@@ -10,12 +10,13 @@ import (
 	"testing"
 )
 
-// Comments and attachments of an article ID go to the article endpoints.
+// Comments, attachments and tags of an article ID go to the article
+// endpoints, those of an issue ID to the issue endpoints.
 func TestArticleIDRoutesToArticles(t *testing.T) {
 	var paths []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		paths = append(paths, r.Method+" "+r.URL.Path)
-		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/comments") {
+		if r.Method == http.MethodPost && strings.Contains(r.URL.Path, "/comments") {
 			_, _ = io.WriteString(w, `{}`)
 			return
 		}
@@ -33,7 +34,19 @@ func TestArticleIDRoutesToArticles(t *testing.T) {
 	if _, err := c.UploadAttachments("SV-A-3", []UploadFile{{Name: "a.txt", Content: strings.NewReader("a")}}); err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"GET /api/articles/SV-A-3/comments", "POST /api/issues/SV-3/comments", "POST /api/articles/SV-A-3/attachments"}
+	if _, err := c.UpdateComment("SV-3", "4-1", "x"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.DeleteComment("SV-A-3", "215-1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.AddTag("SV-A-3", "6-1"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{
+		"GET /api/articles/SV-A-3/comments", "POST /api/issues/SV-3/comments", "POST /api/articles/SV-A-3/attachments",
+		"POST /api/issues/SV-3/comments/4-1", "DELETE /api/articles/SV-A-3/comments/215-1", "POST /api/articles/SV-A-3/tags",
+	}
 	if strings.Join(paths, "\n") != strings.Join(want, "\n") {
 		t.Errorf("paths = %q, want %q", paths, want)
 	}
@@ -78,11 +91,46 @@ func TestCreateArticleBody(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	if _, err := NewClient(srv.URL, "t").CreateArticle(NewArticle{Project: "SV", Summary: "S", ParentID: "109-3"}); err != nil {
+	if _, err := NewClient(srv.URL, "t").CreateArticle(NewArticle{Project: "SV", Summary: "S", ParentID: "109-3", TagIDs: []string{"6-1"}}); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := json.Marshal(body)
-	if want := `{"parentArticle":{"id":"109-3"},"project":{"shortName":"SV"},"summary":"S"}`; string(got) != want {
+	if want := `{"parentArticle":{"id":"109-3"},"project":{"shortName":"SV"},"summary":"S","tags":[{"id":"6-1"}]}`; string(got) != want {
 		t.Errorf("body = %s, want %s", got, want)
+	}
+}
+
+// A move to the top level sends a null parent; a move under another article
+// sends its id; no move leaves the parent out.
+func TestUpdateArticleMove(t *testing.T) {
+	var bodies []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		bodies = append(bodies, string(b))
+	}))
+	defer srv.Close()
+	c := NewClient(srv.URL, "t")
+
+	title := "T"
+	for _, u := range []ArticleUpdate{{Move: true}, {Move: true, ParentID: "109-3"}, {Summary: &title}} {
+		if err := c.UpdateArticle("SV-A-1", u); err != nil {
+			t.Fatal(err)
+		}
+	}
+	want := []string{`{"parentArticle":null}`, `{"parentArticle":{"id":"109-3"}}`, `{"summary":"T"}`}
+	if strings.Join(bodies, "|") != strings.Join(want, "|") {
+		t.Errorf("bodies = %q, want %q", bodies, want)
+	}
+}
+
+func TestVisibilityFromAPI(t *testing.T) {
+	var a Article
+	err := json.Unmarshal([]byte(`{"visibility":{"$type":"LimitedVisibility",
+		"permittedUsers":[{"login":"h","fullName":"Hampus"}],"permittedGroups":[{"name":"Devs"}]}}`), &a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := a.Visibility; v == nil || !v.Limited || len(v.Users) != 1 || v.Users[0] != "Hampus" || len(v.Groups) != 1 {
+		t.Errorf("visibility = %+v", a.Visibility)
 	}
 }

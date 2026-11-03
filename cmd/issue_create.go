@@ -175,7 +175,7 @@ func runIssueCreate(cmd *cobra.Command, args []string) error {
 	// its ID, so the caller finishes it with update instead of creating a
 	// duplicate.
 	issue, created, stepErr := completeCreate(client, issue, links, tags.missing)
-	stepErr = errors.Join(verifyTags(issue, append(tags.found, created...), nil), stepErr)
+	stepErr = errors.Join(verifyTags(issue.IDReadable, issue.Tags, append(tags.found, created...), nil), stepErr)
 
 	w := cmd.OutOrStdout()
 	if jsonOutput {

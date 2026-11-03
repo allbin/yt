@@ -11,6 +11,10 @@ Content is markdown. Issue IDs written in it (PROJ-123) become mentions: the
 issue shows the article under "Articles" in "yt issue", and the article lists
 the issue under "Mentions".
 
+--tag matches tag names as "yt issue create" does; an unknown name errors
+with the closest tags unless --create-tag is given. Existing tags go with the
+create request, so a bad value creates nothing.
+
 --content accepts "@path" to read a file or "-" to read stdin.
 
 ```
@@ -26,6 +30,9 @@ yt article create [flags]
   # meeting notes under a notes page, content from a file
   yt article create --parent PROJ-A-3 -s "Planning 2026-11-03" -c @notes.md
 
+  # tagged
+  yt article create -p PROJ -s "Retro 2026-11-03" --tag meeting --tag retro
+
   # content from stdin
   cat notes.md | yt article create -p PROJ -s "Retro" -c - --json
 ```
@@ -33,11 +40,13 @@ yt article create [flags]
 ### Options
 
 ```
-  -c, --content string   markdown content (@file or - for stdin)
-  -h, --help             help for create
-      --parent string    create as a sub-article of this article
-  -p, --project string   project short name (default: the parent's)
-  -s, --summary string   article title (required)
+  -c, --content string    markdown content (@file or - for stdin)
+      --create-tag        create --tag names that do not exist yet
+  -h, --help              help for create
+      --parent string     create as a sub-article of this article
+  -p, --project string    project short name (default: the parent's)
+  -s, --summary string    article title (required)
+  -t, --tag stringArray   tag (repeatable)
 ```
 
 ### Options inherited from parent commands

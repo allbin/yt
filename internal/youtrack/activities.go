@@ -50,10 +50,10 @@ type ActivityField struct {
 	Name string `json:"name"`
 }
 
-type activityPage struct {
-	Activities  []FieldActivity `json:"activities"`
-	AfterCursor string          `json:"afterCursor"`
-	HasAfter    bool            `json:"hasAfter"`
+type activityPage[T any] struct {
+	Activities  []T    `json:"activities"`
+	AfterCursor string `json:"afterCursor"`
+	HasAfter    bool   `json:"hasAfter"`
 }
 
 // ListFieldActivities returns custom-field changes oldest first, following the
@@ -62,7 +62,6 @@ func (c *Client) ListFieldActivities(f FieldActivityFilter) ([]FieldActivity, er
 	params := url.Values{
 		"categories": {"CustomFieldCategory"},
 		"fields":     {activityPageFields},
-		"$top":       {strconv.Itoa(activityPageSize)},
 	}
 	if f.Author != "" {
 		params.Set("author", f.Author)
@@ -76,15 +75,21 @@ func (c *Client) ListFieldActivities(f FieldActivityFilter) ([]FieldActivity, er
 	if f.IssueQuery != "" {
 		params.Set("issueQuery", f.IssueQuery)
 	}
+	return allActivities[FieldActivity](c, "/api/activitiesPage", params)
+}
 
-	var out []FieldActivity
+// allActivities reads an activitiesPage endpoint oldest first, following the
+// cursor until the server reports no further page.
+func allActivities[T any](c *Client, path string, params url.Values) ([]T, error) {
+	params.Set("$top", strconv.Itoa(activityPageSize))
+	var out []T
 	for {
-		data, err := c.get("/api/activitiesPage", params)
+		data, err := c.get(path, params)
 		if err != nil {
 			return nil, fmt.Errorf("list activities: %w", err)
 		}
 
-		var page activityPage
+		var page activityPage[T]
 		if err := json.Unmarshal(data, &page); err != nil {
 			return nil, fmt.Errorf("parse activities: %w", err)
 		}

@@ -110,13 +110,38 @@ issues on the board's sprints. `--field` lists another field's changes, and
 `-p`/`-q` narrow the issues. An issue moved twice appears twice; group by
 `issue` when summarising.
 
+For everything that happened to one issue or article — who edited the
+description, added a link, deleted a comment — read its history:
+
+```bash
+yt issue history <ID> --json                        # oldest first
+yt issue history <ID> --kind field,comment --json   # only some kinds
+yt article history <ID> --json
+```
+
+Each entry has `time`, `author`, `kind`, `field`, `removed`, and `added`.
+`kind` is one of created, summary, description (content on an article),
+field, link, tag, attachment, attachment-rename, comment, comment-edit,
+comment-attachment, resolved, sprint, project, visibility, commit,
+pull-request. `field` names the custom field, link type, or board, and for
+comment kinds the comment ID. `--json` carries the whole text of every edit,
+so a long description history is large: filter with `--kind`. YouTrack does
+not record moving an article.
+
 ## Creating and updating issues
 
 ```bash
 yt issue create --json -p PROJ -s "Summary" [-d "Description"]
 yt issue update <ID> --json [-s state] [-a assignee] [--tag x] [--field "Name=Value"]
 yt issue comment <ID> -m "text"
+yt issue comment edit <ID> <commentID> -m "text"   # replaces the whole text
+yt issue comment delete <ID> <commentID> --yes
 ```
+
+Comment IDs are the `id` in `yt issue comments --json` and in the reply of
+`yt issue comment --json`. Deleting a comment cannot be undone; without
+`--yes` the command quotes the comment and changes nothing. Edit or delete
+only comments you wrote in this session unless the user asks.
 
 `yt projects --json` lists the project short names that `-p` expects.
 
@@ -226,11 +251,12 @@ Their IDs carry `-A-` (`PROJ-A-12`); `yt article` refuses an issue ID.
 ```bash
 yt article list -p PROJ --json             # metadata only, no content; -q searches, -n limit
 yt article list --parent PROJ-A-3 --json   # direct sub-articles
-yt article <ID> --json                     # content, parent, childArticles, mentionedIssues, attachments
-yt article create -p PROJ -s "Title" -c @notes.md [--parent PROJ-A-3] --json
-yt article update <ID> [-s title] [-c @file | --append @file] --json
-yt article comment <ID> -m "text"
+yt article <ID> --json                     # content, parent, childArticles, mentionedIssues, tags, visibility
+yt article create -p PROJ -s "Title" -c @notes.md [--parent PROJ-A-3] [--tag x] --json
+yt article update <ID> [-s title] [-c @file | --append @file] [--parent ID|none] [--tag x] [--remove-tag y] --json
+yt article comment <ID> -m "text"            # also: comment edit / comment delete, as on issues
 yt article comments <ID> --json
+yt article history <ID> --json
 yt article delete <ID> --yes
 ```
 
@@ -238,7 +264,12 @@ yt article delete <ID> --yes
 the article in the parent's project, so `-p` is optional. `--content` replaces
 the whole content; `--append` adds after it with a blank line between.
 Append reads then writes, so a save by someone else in between is lost: give
-concurrent note-takers their own sub-article.
+concurrent note-takers their own sub-article. `--parent` on `update` moves
+the article with its sub-articles; `none` moves it to the top level. Tags
+match as on issues (`--create-tag` for a new one).
+
+`visibility` is `{"limited": false}` for an article everyone in the project
+can read; when `limited`, only the listed `users` and `groups` can.
 
 An issue ID written in an article's content becomes a mention, which is the
 only link between articles and issues. The article lists it under

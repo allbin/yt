@@ -19,7 +19,7 @@ func CommentList(w io.Writer, comments []youtrack.Comment) error {
 	for i, c := range comments {
 		cv := c.View()
 		ts := time.Unix(cv.Created/1000, 0).Format("2006-01-02 15:04")
-		ew.printf("%s  %s\n", StyleBold.Render(cv.Author), StyleDim.Render(ts))
+		ew.printf("%s  %s  %s\n", StyleBold.Render(cv.Author), StyleDim.Render(ts), StyleDim.Render(c.ID))
 		ew.println(strings.TrimSpace(c.Text))
 		if i < len(comments)-1 {
 			ew.println()
