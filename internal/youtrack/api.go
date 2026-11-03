@@ -18,6 +18,7 @@ type API interface {
 	// an issue ID (PROJ-12) or an article ID (PROJ-A-12).
 	ListComments(id string) ([]Comment, error)
 	AddComment(id, text string) (*Comment, error)
+	GetComment(id, commentID string) (*Comment, error)
 	UpdateComment(id, commentID, text string) (*Comment, error)
 	DeleteComment(id, commentID string) error
 	CreateIssue(n NewIssue) (*Issue, error)

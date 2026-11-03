@@ -2,11 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/allbin/yt/internal/format"
-	"github.com/allbin/yt/internal/youtrack"
 	"github.com/spf13/cobra"
 )
 
@@ -111,15 +109,10 @@ func runCommentDelete(cmd *cobra.Command, id, commentID string) error {
 	}
 	// Read first: a wrong ID errors before anything is deleted, and the
 	// refusal without --yes can quote the comment.
-	comments, err := client.ListComments(id)
+	c, err := client.GetComment(id, commentID)
 	if err != nil {
 		return err
 	}
-	i := slices.IndexFunc(comments, func(c youtrack.Comment) bool { return c.ID == commentID })
-	if i < 0 {
-		return fmt.Errorf("no comment %s on %s", commentID, id)
-	}
-	c := comments[i]
 	if !commentDeleteYes {
 		return fmt.Errorf("deleting comment %s by %s (%q) cannot be undone; rerun with --yes",
 			commentID, c.View().Author, format.FirstLine(c.Text, 60))

@@ -230,6 +230,14 @@ func (m *mockAPI) UpdateArticle(_ string, u youtrack.ArticleUpdate) error {
 	m.updatedArticle = &u
 	return nil
 }
+func (m *mockAPI) GetComment(_, commentID string) (*youtrack.Comment, error) {
+	for _, c := range m.comments {
+		if c.ID == commentID {
+			return &c, nil
+		}
+	}
+	return nil, &youtrack.APIError{StatusCode: 404, Body: `{"error_description":"Not Found"}`}
+}
 func (m *mockAPI) UpdateComment(_, commentID, text string) (*youtrack.Comment, error) {
 	m.editedComment = commentID + "|" + text
 	return &youtrack.Comment{ID: commentID, Text: text}, nil

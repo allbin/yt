@@ -116,3 +116,23 @@ func TestAddComment(t *testing.T) {
 		t.Errorf("Text = %q, want Hello", comment.Text)
 	}
 }
+
+func TestListCommentsPages(t *testing.T) {
+	orig := commentPageSize
+	commentPageSize = 2
+	t.Cleanup(func() { commentPageSize = orig })
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pages := map[string]string{"0": `[{"id":"1"},{"id":"2"}]`, "2": `[{"id":"3"}]`}
+		_, _ = io.WriteString(w, pages[r.URL.Query().Get("$skip")])
+	}))
+	defer srv.Close()
+
+	got, err := NewClient(srv.URL, "t").ListComments("SV-1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 3 {
+		t.Errorf("got %d comments, want 3 across two pages", len(got))
+	}
+}

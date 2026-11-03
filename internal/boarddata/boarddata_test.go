@@ -190,3 +190,4 @@ func TestResolveSprintByName(t *testing.T) {
 func (m *mockAPI) UpdateComment(string, string, string) (*youtrack.Comment, error) { return nil, nil }
 func (m *mockAPI) DeleteComment(string, string) error                              { return nil }
 func (m *mockAPI) History(string) ([]youtrack.HistoryEntry, error)                 { return nil, nil }
+func (m *mockAPI) GetComment(string, string) (*youtrack.Comment, error)            { return nil, nil }

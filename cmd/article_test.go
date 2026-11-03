@@ -130,7 +130,7 @@ func TestCommentDelete(t *testing.T) {
 	if _, err := run("issue", "comment", "delete", "SV-1", "4-1"); err == nil || !strings.Contains(err.Error(), `"typo here…"`) {
 		t.Errorf("without --yes: err = %v, want a refusal quoting the comment", err)
 	}
-	if _, err := run("issue", "comment", "delete", "SV-1", "4-2", "--yes"); err == nil || !strings.Contains(err.Error(), "no comment 4-2") {
+	if _, err := run("issue", "comment", "delete", "SV-1", "4-2", "--yes"); err == nil || !strings.Contains(err.Error(), "Not Found") {
 		t.Errorf("unknown id: err = %v", err)
 	}
 	if len(mock.deletedComments) != 0 {
